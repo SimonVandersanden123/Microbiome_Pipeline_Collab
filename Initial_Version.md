@@ -56,7 +56,7 @@ This is where the microbiology meets the chemistry. It contains all environmenta
 A phylogenetic tree represents the "genetic distance" between the different sequences. TLDR: sequences that look alike, are likely more related, so they are closer in the phylogenetic tree. 
 
 **Use**: This is often optional but can be used for calculating more advanced microbial community metrics such as **Faith's Phylogenetic Diversity** or **UniFrac distances** which take into account how closely related the different species are. So it is a metric that takes into account how similar the sequences are, instead of just looking at 'how many' different sequences that are found. Because this might be important in the biological question you are asking.
-## Implementation in R
+### 2.2 Implementation in R
 To inspect these components, you can use these functions:
 
 ```r
@@ -80,8 +80,54 @@ head(tax_table_data)
 # To see the Metadata
 metadata_data <- as(sample_data(Phylo_Object), "data.frame")
 head(metadata_data)
+```
+## 3. Data Pre-processing
+Before the analysis, the data must be cleaned and normalized to ensure that differences between the samples are biological, not technical artifacts.
 
+### Filtering
+#### Some filtering normally also has been done beforehand: (atleast that is how I do it)
+**Sequencing depth threshold**
+Removing samples with insufficient reads.
+**Contaminant filtering**
+Using tools like decontam, here you do need an accurate blanc included in the samples.
+**Taxonomic filtering**
+Removing:
+Eukaryota
+Mitochondria
+Chloroplast
+#### Filtering that is normal to start the analysis of 'clean ready to go phyloseq objects'
+We apply filters based on the specific research question. This includes:
+**Prevalence Filtering**: Removing ASVs that appear in only one or two samples, as these may be sequencing artifacts.
 
+Example: Keep ASVs present in ≥5% of samples, Or present in ≥3 samples
+
+This will : Reduces sparsity, removes potential artifacts, improves statistical power.
+
+**Abundance Filtering**: Removing the sequences which have a low relative abundance
+
+Example: Remove ASVs with total counts < 10, Remove ASVs with relative abundance < 0.01%
+
+Sample removal is usually based on: 
+
+**Subset Selection**: This is not strictly a "filter" — it’s more: Stratification, Experimental subsetting.
+
+Example: Compare “Contaminated” vs “Reference”, Analyze only PAH polluted samples
+
+So it’s analytical selection rather than noise filtering.
+
+### 3.2 Normalization & The "Zero Problem"
+Because different samples result in different total "reads" (sequencing depth), we cannot compare raw counts directly. Furthermore, microbiome data is **compositional** (counts are parts of a whole), meaning an increase in one taxon's abundance forcedly decreases the relative abundance of others.
+#### **Handling Sparsity (The Zero Problem)**
+Microbial matrices are "sparse" (contain many zeros). Since mathematical transformations like **CLR** involve logarithms, we cannot process zeros directly. We handle this **after filtering** by:
+
+**Pseudo-counts:** Adding a small value (e.g., 1) to all entries.
+
+**Imputation:** Estimating zero values based on the probability distribution of the detected sequences, various methods exist.
+
+#### **Transformation Methods**
+**Relative Abundance (TSS):** Normalizes counts to a scale of 0–1 (or 0–100%). While intuitive, it does not solve the compositional bias.
+  
+**Centered Log-Ratio (CLR):** Transforms the data into a real-number space (Aitchisonian geometry). This removes the "unit sum" constraint and is the gold standard for **linear modeling** and **correlation analysis** in microbial ecology.
 
 
 
