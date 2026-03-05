@@ -56,32 +56,14 @@ This is where the microbiology meets the chemistry. It contains all environmenta
 A phylogenetic tree represents the "genetic distance" between the different sequences. TLDR: sequences that look alike, are likely more related, so they are closer in the phylogenetic tree. 
 
 **Use**: This is often optional but can be used for calculating more advanced microbial community metrics such as **Faith's Phylogenetic Diversity** or **UniFrac distances** which take into account how closely related the different species are. So it is a metric that takes into account how similar the sequences are, instead of just looking at 'how many' different sequences that are found. Because this might be important in the biological question you are asking.
-### 2.2 Implementation in R
+#### 2.2 Implementation in R
 To inspect these components, you can use these functions:
 
 ```r
-# Load in the necessary libraries:
-library(phyloseq)
-library(dplyr)
-library(picante)    # For Phylogenetic Diversity
-library(microbiome) # For Dominance metrics
-# Look at the data in your Phyloseq object:
-# Load in the phyloseq object, which was generated at the end of the DADA2 pipeline.
-Phylo_Object <- readRDS("ps_IdTax_noncontam_NoMito_No_Chloro.rds")
-
-# To see the count data (OTU table)
-otu_table_data <- as(otu_table(Phylo_Object), "matrix")
-head(otu_table_data[, 1:5]) # View first 5 ASVs
-
-# To see the Taxonomy
-tax_table_data <- as(tax_table(Phylo_Object), "matrix")
-head(tax_table_data)
-
-# To see the Metadata
-metadata_data <- as(sample_data(Phylo_Object), "data.frame")
-head(metadata_data)
+Run this using the .Rmd file:
+## 1:Inspecting the different parts of the phyloseq object
 ```
-## 3. Data Pre-processing
+## 3. Data Pre-processing: Filtering and normalisation
 Before the analysis, the data must be cleaned and normalized to ensure that differences between the samples are biological, not technical artifacts.
 
 ### Filtering
@@ -95,7 +77,11 @@ Removing:
 Eukaryota
 Mitochondria
 Chloroplast
+#### Rarefaction_curves to check if sequencing depth was sufficient
+
+**rarefaction_curves**: Rarefaction curves plot the number of unique species (ASVs) discovered against the total number of sequences (reads) per sample to determine if the sequencing depth was sufficient to capture the site's full diversity. For data analysis, a curve that reaches a plateau indicates a reliable "steady-state" representation of the community, whereas a steep, rising curve suggests the diversity is under-sampled and the "true" richness remains unknown. Also samples with very low reads are candidates to remove
 #### Filtering that is normal to start the analysis of 'clean ready to go phyloseq objects'
+
 We apply filters based on the specific research question. This includes:
 **Prevalence Filtering**: Removing ASVs that appear in only one or two samples, as these may be sequencing artifacts.
 
@@ -115,6 +101,14 @@ Example: Compare “Contaminated” vs “Reference”, Analyze only PAH pollute
 
 So it’s analytical selection rather than noise filtering.
 
+#### 2.2 Implementation in R
+To peform these filtering steps you can use this script:
+
+```r
+Run this using the .Rmd file:
+## 2:Data Pre-processing: Filtering
+```
+
 ### 3.2 Normalization & The "Zero Problem"
 Because different samples result in different total "reads" (sequencing depth), we cannot compare raw counts directly. Furthermore, microbiome data is **compositional** (counts are parts of a whole), meaning an increase in one taxon's abundance forcedly decreases the relative abundance of others.
 #### **Handling Sparsity (The Zero Problem)**
@@ -129,8 +123,10 @@ Microbial matrices are "sparse" (contain many zeros). Since mathematical transfo
   
 **Centered Log-Ratio (CLR):** Transforms the data into a real-number space (Aitchisonian geometry). This removes the "unit sum" constraint and is the gold standard for **linear modeling** and **correlation analysis** in microbial ecology.
 
-
-
+```r
+Run this using the .Rmd file:
+## 2:Data Pre-processing: Normalisation
+```
 
 
 
