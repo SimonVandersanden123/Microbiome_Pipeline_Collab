@@ -1,0 +1,97 @@
+---
+title: "Rmarkdown_16S_Ananlysis"
+author: "Simon Vandersanden"
+date: "2026-03-05"
+output: html_document
+---
+
+Loading in the necessary libraries for basic handeling 
+```{r}
+library(phyloseq)
+library(dplyr)
+library(picante)    # For Phylogenetic Diversity
+library(microbiome) # For Dominance metrics
+```
+
+
+## 1:Inspecting the different parts of the phyloseq object
+```{r}
+#Load in the phyloseq object
+source("scripts/01_load_phyloseq.R") 
+# To see the OTU table
+mibi_otu_table<- as(otu_table(mibi_phylo_object), "matrix")
+head(mibi_otu_table[,1:5])
+# To see the Taxonomy
+mibi_tax_table <- as(tax_table(mibi_phylo_object), "matrix")
+head(mibi_tax_table)
+# To see the Metadata
+mibi_meta_table <- as(sample_data(mibi_phylo_object), "data.frame")
+head(mibi_tax_table)
+
+# You can also swap the metadata table, in case you want to make adjustments to the grouping of the samples or add some new metadata the the specific samples
+mibi_meta_table_new <- read.table("data/META_Griftpark_Enrichments_Form.txt", header = T, sep = "\t", row.names = 1, stringsAsFactors = FALSE, dec = ',')
+
+sample_data(mibi_phylo_object) <- mibi_meta_table_new
+
+#After this step you have the otu count table information, the taxonomy table and the correct or an updated version of the metadata
+
+```
+## 2:Data Pre-processing: Filtering
+```{r}
+#Normally some pre filtering has been done on the reads before they were put into the phyloseq object: the sequencing depth threshhold, the decontamination, and some taxonomic filtering of certain undesired taxa such as Eukaryota, Mitochondria and Chloroplast sequences.
+
+# It is possible that that some blancs and mock samples are still present in the samples, these should be filtered out because we will only filter using all the 'real samples'
+#filter out these blanc samples:
+samples_to_remove <- c("Blank", "MockB", "nosample1", "nosample2", "nosample3", "nosample4")
+mibi_phylo_object <- prune_samples(
+  !(sample_names(mibi_phylo_object) %in% samples_to_remove),
+  mibi_phylo_object
+)
+# Check the rarefaction curves:
+source("scripts/02_rarefaction_curves.R")
+
+# --- USER INPUT SECTION ---
+# Thresholds
+prev_filter_threshold = 3   # Present in at least X samples
+abund_filter_threshold = 5 # At least X reads 
+# Logic Switches (1 = On, 0 = Off)
+  # Here you can specify which filtering must be done,
+  # Only based on prevalence, or abudance. Then fill in a 0 accordingly
+  # Most of the time it is a combination of both prevalence and abundance, for example, at least >10 reads in 5 samples.
+prev_filter = 1 
+abund_filter = 1
+# --------------------------
+# Run the background script
+source("scripts/02_filtering.R")
+# The resulting object 'mibi_phylo_object_filt' is now ready for further processing
+
+#Subset selection, this is optional, you can select a specific set of samples.
+# Specify the group you want to isolate
+target_group <- "2A"
+# Filter the phyloseq object to keep ONLY group 2A
+mibi_phylo_object_filt <- subset_samples(mibi_phylo_object, group == target_group)
+# IMPORTANT: Remove ASVs that are no longer present in this specific group
+# (Otherwise you have 1346 ASVs but many might have 0 counts in group 2A)
+mibi_phylo_object_filt <- prune_taxa(taxa_sums(mibi_phylo_object_filt) > 0, mibi_phylo_object_filt)
+
+```
+2:Data Pre-processing: Normalisation
+```{r}
+
+#normalization step
+
+mibi_phylo_object_filt
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
