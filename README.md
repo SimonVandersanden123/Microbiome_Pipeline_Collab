@@ -5,7 +5,7 @@ This repository contains a modular pipeline designed to transform microbial ampl
 ## 📁 Repository Structure
 
 * **`Primary_Documentation.md`**: The primary documentation. Refer to this file for the **scientific theory**, detailed explations behind the different steps of the pipeline, with theoretical reasoning and considerations behind the different steps.
-* **`docs/Pipeline_Overview.Rmd`**: The executive summary of the analysis. This file contains a title of the respective steps and pulls code from the `scripts/` folder and generates the visualizations. **Run this to see the results, of the different steps.**
+* **`Pipeline_Overview.Rmd`**: The executive summary of the analysis. This file contains a title of the respective steps and pulls code from the `scripts/` folder and generates the visualizations. **Run this to see the results, of the different steps.**
 * **`scripts/`**: Modular R scripts. Each script handles one specific step (Loading, Filtering, etc.). These are called by the `.Rmd` via the `source()` command.
 * **`data/`**: Contains the input `phyloseq` objects (e.g., `.rds` files).
 * **`results/`**: Output directory for generated plots and processed `.csv` tables.
