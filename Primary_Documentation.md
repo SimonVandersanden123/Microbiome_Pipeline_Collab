@@ -133,7 +133,7 @@ Microbial matrices are "sparse" (contain many zeros). Since mathematical transfo
 ##### *When do we use which normalisation method?
 **Relative Abundance (TSS):** This is used for simple visualisations, such as simple bar charts, pie charts, simple comparisons (taxon A is twice as abundant in group A compared to group B (this is not statistically differentially abudant, but for simple statements is suffieces). 'Core microbiome analysis, if you want to see which taxa are present in the samples or groups with at least a relative abundance of >0.1%.
 
-**Centered Log-Ratio (CLR):** TThis should be used in statistical modeling, hypothesis testing, and correlation. Basically when you want to use mathematics to interpret or analyse your data and overcome the "compositional" constraint. Correlation analysis, ordination plots, differential abundance testing. **Beta diversity, Correlation Networks, Differential Abundance, Linear Regression & ODE Modeling,**
+**Centered Log-Ratio (CLR):** TThis should be used in statistical modeling, hypothesis testing, and correlation. Basically when you want to use mathematics to interpret or analyse your data and overcome the "compositional" constraint. Correlation analysis, ordination plots, differential abundance testing. **Beta diversity, Correlation Networks, Differential Abundance, Linear Regression & Ordinary differential equation modeling,**
 
 ```r
 Run this using the .Rmd file:
