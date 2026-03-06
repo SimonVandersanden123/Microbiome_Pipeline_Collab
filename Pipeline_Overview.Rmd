@@ -36,7 +36,7 @@ sample_data(mibi_phylo_object) <- mibi_meta_table_new
 #After this step you have the otu count table information, the taxonomy table and the correct or an updated version of the metadata
 
 ```
-## 2:Data Pre-processing: Filtering
+## 2.1:Data Pre-processing: Filtering
 ```{r}
 #Normally some pre filtering has been done on the reads before they were put into the phyloseq object: the sequencing depth threshhold, the decontamination, and some taxonomic filtering of certain undesired taxa such as Eukaryota, Mitochondria and Chloroplast sequences.
 
@@ -75,12 +75,25 @@ mibi_phylo_object_filt <- subset_samples(mibi_phylo_object, group == target_grou
 mibi_phylo_object_filt <- prune_taxa(taxa_sums(mibi_phylo_object_filt) > 0, mibi_phylo_object_filt)
 
 ```
-2:Data Pre-processing: Normalisation
+2.2:Data Pre-processing: Normalisation
 ```{r}
+## 2.2 Normalization & The "Zero Problem"
+#Microbiome data is **compositional**. Because the total number of reads is an artifact of the DNA sequencer, the counts are not absolute; they are "parts of a whole." If one taxon blooms, others appear to decrease simply because they occupy a smaller percentage of the total pool.
 
-#normalization step
+### Handling Sparsity
+#Our filtered matrix still contains many zeros. To perform the **CLR transformation**, we must address these because $\log(0)$ is undefined. We can use a **Pseudo-count (+1)** to shift the data, or more advanced methods such as Bayesian-Multiplicative Replacement. https://www.rdocumentation.org/packages/zCompositions/versions/1.6.0/topics/cmultRepl 
 
-mibi_phylo_object_filt
+### Transformation Applied
+We generate two versions of the data:
+1.  **TSS (Relative Abundance)**: Used for stacked bar plots and descriptive statistics.
+2.  **CLR (Centered Log-Ratio)**: Used for all downstream statistical modeling (PCoA, Correlation, Differential Abundance).
+
+```{r normalization}
+# Source the normalization script
+source("../scripts/02_normalization.R")
+
+# Quick check of the first sample (first 5 ASVs) in CLR space
+head(abundances(mibi_clr)[1, 1:5])
 
 
 ```
