@@ -3,15 +3,15 @@
 **Contact:** simon.vandersanden@uhasselt.be  
 **Last Updated:** 2025-03-24
 
-## 1. Overview
+##  Overview
 
 This pipeline transforms raw amplicon sequencing data (ASV/OTU tables) into microbial community traits, which can be inferred to microbial traits or characteristics.We are moving from **counts** of specific bacteria to **functional and phylogenetic traits** that can be used for modelling.
 
-## 2.Environment Setup & Data Containers:
+## 1.Environment Setup & Data Containers:
 
 We utilize the phyloseq R package as our primary data container. Think of a phyloseq object as a "relational database" that wraps four distinct tables into one synchronized file. This synchronization is key: if we filter out a "Blank" sample from the metadata, it is automatically removed from the count and taxonomy tables, maintaining data integrity across the pipeline.
 
-### 2.1 The Components of the Pipeline
+### 1.1 The Components of the Pipeline
 
 #### **@otu_table (The Count Matrix)**
 
@@ -63,10 +63,10 @@ To inspect these components, you can use these functions:
 Run this using the .Rmd file:
 ## 1:Inspecting the different parts of the phyloseq object
 ```
-## 3. Data Pre-processing: Filtering and normalisation
+## 2. Data Pre-processing: Filtering and normalisation
 Before the analysis, the data must be cleaned and normalized to ensure that differences between the samples are biological, not technical artifacts.
 
-### Filtering
+### 2.1 Filtering
 #### Some filtering normally also has been done beforehand: (atleast that is how I do it)
 **Sequencing depth threshold**
 Removing samples with insufficient reads.
@@ -101,7 +101,7 @@ Example: Compare “Contaminated” vs “Reference”, Analyze only PAH pollute
 
 So it’s analytical selection rather than noise filtering.
 
-#### 2.2 Implementation in R
+#### 2.1 Implementation in R
 To peform these filtering steps you can use this script:
 
 ```r
@@ -109,25 +109,37 @@ Run this using the .Rmd file:
 ## 2:Data Pre-processing: Filtering
 ```
 
-### 3.2 Normalization & The "Zero Problem"
-Because different samples result in different total "reads" (sequencing depth), we cannot compare raw counts directly. Furthermore, microbiome data is **compositional** (counts are parts of a whole), meaning an increase in one taxon's abundance forcedly decreases the relative abundance of others.
+### 2.2 Normalization & The "Zero Problem"
+Because different samples result in different total "reads" (sequencing depth), we cannot compare raw counts directly. Furthermore, microbiome data is **compositional** (counts are parts of a whole), meaning an increase in one taxon's abundance forcedly decreases the relative abundance of others. This gives us a problem when doing statistics on the data:
+
+**Spurious Correlations**: In compositional datasets, traditional correlation coefficients (like Pearson) are biased. Taxa may appear to be negatively correlated simply because they are competing for a fixed 100% of the "pie chart," not because of a biological interaction.
+
+**Differential Abundance Bias**: Without proper normalization, a taxon might appear "significantly different" between treatments solely because the sequencing depth was higher in one group, not because its absolute concentration changed in the soil.
+
+**Beta Diversity**: Metrics like Bray-Curtis are sensitive to library size. Using CLR (Centered Log-Ratio) transformation allows us to move from the "constrained" space of percentages to an "unconstrained" Euclidean space, enabling the use of standard linear models and PCoA.
+
 #### **Handling Sparsity (The Zero Problem)**
 Microbial matrices are "sparse" (contain many zeros). Since mathematical transformations like **CLR** involve logarithms, we cannot process zeros directly. We handle this **after filtering** by:
 
 **Pseudo-counts:** Adding a small value (e.g., 1) to all entries.
 
-**Imputation:** Estimating zero values based on the probability distribution of the detected sequences, various methods exist.
+**Imputation:** Estimating zero values based on the probability distribution of the detected sequences, various methods exist such as the Bayesian-Multiplicative Replacement. Bayesian Multiplicative (GBM) model to impute zero values. This method estimates the probability of a taxon being present but undetected based on the sample's total sequencing depth, ensuring that the internal covariance and ratios of the community remain biologically accurate for downstream modeling.
 
 #### **Transformation Methods**
 **Relative Abundance (TSS):** Normalizes counts to a scale of 0–1 (or 0–100%). While intuitive, it does not solve the compositional bias.
   
 **Centered Log-Ratio (CLR):** Transforms the data into a real-number space (Aitchisonian geometry). This removes the "unit sum" constraint and is the gold standard for **linear modeling** and **correlation analysis** in microbial ecology.
 
+##### *When do we use which normalisation method?
+**Relative Abundance (TSS):** This is used for simple visualisations, such as simple bar charts, pie charts, simple comparisons (taxon A is twice as abundant in group A compared to group B (this is not statistically differentially abudant, but for simple statements is suffieces). 'Core microbiome analysis, if you want to see which taxa are present in the samples or groups with at least a relative abundance of >0.1%.
+
+**Centered Log-Ratio (CLR):** TThis should be used in statistical modeling, hypothesis testing, and correlation. Basically when you want to use mathematics to interpret or analyse your data and overcome the "compositional" constraint. Correlation analysis, ordination plots, differential abundance testing. **Beta diversity, Correlation Networks, Differential Abundance, Linear Regression & ODE Modeling,**
+
 ```r
 Run this using the .Rmd file:
 ## 2:Data Pre-processing: Normalisation
 ```
-
+## 3. Alfa diversity calculations 
 
 
 
