@@ -122,11 +122,12 @@ Because different samples result in different total "reads" (sequencing depth), 
 Microbial matrices are "sparse" (contain many zeros). Since mathematical transformations like **CLR** involve logarithms, we cannot process zeros directly. We handle this **after filtering** by:
 
 **Pseudo-counts:** Adding a small value (e.g., 1) to all entries.
-
+**Library size based imputation:**: Imputation-based approaches, where the zero’s are imputed differently according to the library size of the sample. Used by LinDA package
 **Imputation:** Estimating zero values based on the probability distribution of the detected sequences, various methods exist such as the Bayesian-Multiplicative Replacement (BMR). Bayesian Multiplicative (GBM) model to impute zero values. This method estimates the probability of a taxon being present but undetected based on the sample's total sequencing depth, ensuring that the internal covariance and ratios of the community remain biologically accurate for downstream modeling.
 **Matrix Completion**:Matrix completion (often via Probabilistic Matrix Factorization) treats zeros as missing values. It assumes that the data has a low-rank structure—meaning that a few underlying biological factors (like diet, host health, or environment) explain most of the variation in the microbial community. Best for: Predictive modeling.
+**Others**: various other imputation appoaches are possible, however often they are included in the packages, such as ANCOMBC2 which uses an other even more advanced type of zero imputation.
 
-Which imputation method to use depends on the downstream application:
+**Which imputation method to use depends on the downstream application:**
 
 Use Bayesian-Multiplicative Replacement (BMR) if you are performing standard statistical comparisons (e.g., "Is Taxon A higher in the sick group than the healthy group?"). It is the "gold standard" for preprocessing data before Log-Ratio transformations, which are required to account for the compositional nature of sequencing data.
 
