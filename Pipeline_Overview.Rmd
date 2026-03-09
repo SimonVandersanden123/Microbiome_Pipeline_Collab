@@ -81,11 +81,20 @@ mibi_phylo_object_filt <- prune_taxa(taxa_sums(mibi_phylo_object_filt) > 0, mibi
 #Microbiome data is **compositional**. Because the total number of reads is an artifact of the DNA sequencer, the counts are not absolute; they are "parts of a whole." If one taxon blooms, others appear to decrease simply because they occupy a smaller percentage of the total pool.
 
 ### Handling Sparsity
-#Our filtered matrix still contains many zeros. To perform the **CLR transformation**, we must address these because $\log(0)$ is undefined. We can use a **Pseudo-count (+1)** to shift the data, or more advanced methods such as Bayesian-Multiplicative Replacement. https://www.rdocumentation.org/packages/zCompositions/versions/1.6.0/topics/cmultRepl 
+#Our filtered matrix still contains many zeros. To perform the **CLR transformation**, we must address these because $\log(0)$ is undefined. We can use a **Pseudo-count (+1)** to shift the data and lose the zero's.
+Or more advanced methods such as:
+**Bayesian-Multiplicative Replacement**: 
+Better for peforming standard statistical comparisons. The gold standard for preprocessing data before log/ratio calculations.
+This method treats zeros as "sampling zeros" and replaces them with a posterior estimate based on a Bayesian Dirichlet-multinomial model. 
+Instead of treating a zero as an absolute "nothing," BMR treats it as a probability. It uses the global behavior of the data (the Dirichlet prior) to estimate a non-zero value that is most likely to be true, given the sequencing depth of that specific sample. It then multiplicatively adjusts the non-zero values to ensure the total composition still sums to one, preserving the original ratios between taxa.
+
+**Matrix Completion**:
+A mathematical technique that recovers missing or unobserved entries in a data matrix by assuming the underlying structure is low-rank, effectively "filling in the blanks" based on known correlations between samples and taxa.
+Because this technique makes use or necessitates that there is an underlying structure in the microbial community structure caused by inherent factor of the system, it might be better to use this in predictive modelling. It is particularly effective for predictive modeling and identifying latent signatures.
 
 ### Transformation Applied
 We generate two versions of the data:
-1.  **TSS (Relative Abundance)**: Used for stacked bar plots and descriptive statistics.
+1.  **TSS (Relative Abundance)**: Used for stacked bar plots and descriptive statistics, here we don't need to have the zero replacement beforehand.
 2.  **CLR (Centered Log-Ratio)**: Used for all downstream statistical modeling (PCoA, Correlation, Differential Abundance).
 
 ```{r normalization}
