@@ -148,6 +148,35 @@ Run this using the .Rmd file:
 ## 2:Data Pre-processing: Normalisation
 ```
 ## 3. Alfa diversity calculations 
+Alpha diversity metrics are a general term for metrics that describe the species richness, evenness, or diversity within a sample. Collectively, these metrics contribute to a comprehensive set of traits characterizing the samples, allowing for the determination of key aspects of the microbial community.
+### Alfa diversity metrics
+Numerous alfa diversity metrics exist. However many different metrics used to determine similar traits yield highly similar results. Therefore a solid selection of the metrics is essential to provide a clear, non-redundant and complete overview of the microbial community traits. 4 main categories exist: richness, dominance, phylogenetic and information metrics (https://doi.org/10.1038/s41598-024-77864-y). 
+
+#### Richness:
+Species richness (Observed):A measure of how many different ASV/OTUs are present in each samples.
+High richness often suggests a more resilient community.
+#### Dominance:
+Different measure on the degree in which a taxon or groups of taxa have monopolized the environment. 
+##### Evenness 
+Describes how fairly the different abundances are distrubuted in the community. In polluted sites, the evenness is typically low since a few specialised species will outcompe the others.
+#### Information
+Shannon diveristy:
+The Shannon Diversity Index (also known as Shannon-Weaver Index or Shannon Entropy) is a measure that quantifies both the richness (total number of different species present) and evenness (how equally abundant the different species are) of species in a community. Unlike simple richness measures that only count the number of different species, the Shannon Index considers how abundance is distributed among those species.
+
+#### 2.1 Implementation in R
+```r
+Run this using the .Rmd file:
+## 3.1:Calculating alfa diversity metrics
+## 3.2:To visualise the alfa diversity metric results 
+```
+
+
+
+
+
+
+
+
 
 
 
