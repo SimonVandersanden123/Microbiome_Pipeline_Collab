@@ -50,9 +50,9 @@ mibi_phylo_object <- prune_samples(
 # Check the rarefaction curves:
 source("scripts/02_rarefaction_curves.R")
 
-# --- USER INPUT SECTION ---
+# --- Filtering parameters:USER INPUT SECTION ---
 # Thresholds
-prev_filter_threshold = 3   # Present in at least X samples
+prev_filter_threshold = 1   # Present in at least X samples
 abund_filter_threshold = 5 # At least X reads 
 # Logic Switches (1 = On, 0 = Off)
   # Here you can specify which filtering must be done,
@@ -98,10 +98,52 @@ head(abundances(mibi_clr)[1, 1:5])
 
 ```
 
+3.1: Calculating alfa diversity metrics
+```{r}
+#Alpha diversity metrics are a general term for metrics that describe the species richness, evenness, or diversity within a sample. Collectively, these metrics contribute to a comprehensive set of traits characterizing the samples, allowing for the determination of key aspects of the microbial community.
+#4 main categories exist: richness, dominance, phylogenetic and information metrics
+
+alfa_diversity_phyloseq_object <-mibi_phylo_object_filt
+# --- USER INPUT SECTION: Select Community Traits ---
+# 1. Richness (How many?)
+selected_richness <- c('observed', 'chao1') 
+
+# 2. Dominance (Who is the power player?)
+selected_dominance <- c('absolute', 'dbp') 
+
+# 3. Evenness (How fair is the distribution?)
+selected_evenness <- c('pielou', 'simpson', 'evar')
+
+# 4. Information (Mathematical entropy/uncertainty)
+selected_information <- c('shannon') 
+# --------------------------------------------------
+# Run background script
+source("scripts/04_alpha_diversity.R")
+# Display results
+knitr::kable(head(alpha_output))
+
+```
+3.1: Alpha diversity visualisation
+```{r}
+
+#We visualize the distribution of community traits across our experimental groups. Note that the Y-axis scales are "free" because the units for Richness (counts) and Dominance (0-1) are fundamentally different.  
+  
+# --- PLOT SETTINGS: USER INPUT ---
+plot_x_axis <- "group"     # What is on the X-axis? (e.g., "Timepoint", "group")
+plot_color_by <- "group"       # What defines the colors? (e.g., "group", "replicate")
+plot_metrics <- all_requested_cols # Use all calculated, or specific ones: c("observed", "diversity_shannon")
+
+# Optional: Wrap the plot into how many columns?
+plot_cols <- 3 
+
+# ---------------------------------
+source("scripts/04_1_alpha_plots.R")
 
 
+plot(alpha_boxplot)
 
 
+```
 
 
 
