@@ -97,13 +97,6 @@ mibi_phylo_object_filt <- prune_taxa(taxa_sums(mibi_phylo_object_filt) > 0, mibi
 #2.  **CLR (Centered Log-Ratio)**: Used for all downstream statistical modeling (PCoA, Correlation, Differential Abundance).
 
 
-# Source the normalization script
-source("../scripts/02_normalization.R")
-
-# Quick check of the first sample (first 5 ASVs) in CLR space
-head(abundances(mibi_clr)[1, 1:5])
-
-
 ```
 
 3.1: Calculating alfa diversity metrics
