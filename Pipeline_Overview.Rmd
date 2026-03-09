@@ -15,7 +15,7 @@ library(microbiome) # For Dominance metrics
 
 
 ## 1:Inspecting the different parts of the phyloseq object
-```{r}
+```{r,include=FALSE}
 #Load in the phyloseq object
 source("scripts/01_load_phyloseq.R") 
 # To see the OTU table
@@ -52,14 +52,15 @@ source("scripts/02_rarefaction_curves.R")
 
 # --- Filtering parameters:USER INPUT SECTION ---
 # Thresholds
-prev_filter_threshold = 1   # Present in at least X samples
-abund_filter_threshold = 5 # At least X reads 
+prev_filter_threshold = 3   # Present in at least X samples
+abund_filter_threshold = 1 # At least X reads 
+
 # Logic Switches (1 = On, 0 = Off)
   # Here you can specify which filtering must be done,
   # Only based on prevalence, or abudance. Then fill in a 0 accordingly
   # Most of the time it is a combination of both prevalence and abundance, for example, at least >10 reads in 5 samples.
-prev_filter = 1 
-abund_filter = 1
+prev_filter = 2 
+abund_filter = 5
 # --------------------------
 # Run the background script
 source("scripts/02_filtering.R")
@@ -81,14 +82,21 @@ mibi_phylo_object_filt <- prune_taxa(taxa_sums(mibi_phylo_object_filt) > 0, mibi
 #Microbiome data is **compositional**. Because the total number of reads is an artifact of the DNA sequencer, the counts are not absolute; they are "parts of a whole." If one taxon blooms, others appear to decrease simply because they occupy a smaller percentage of the total pool.
 
 ### Handling Sparsity
-#Our filtered matrix still contains many zeros. To perform the **CLR transformation**, we must address these because $\log(0)$ is undefined. We can use a **Pseudo-count (+1)** to shift the data, or more advanced methods such as Bayesian-Multiplicative Replacement. https://www.rdocumentation.org/packages/zCompositions/versions/1.6.0/topics/cmultRepl 
+#Our filtered matrix still contains many zeros. To perform the **CLR transformation**, we must address these because $\log(0)$ is undefined. We can use a **Pseudo-count (+1)** to shift the data, or more advanced methods such as Bayesian-Multiplicative Replacement or matrix completion.
+
+#Watch out: for Bayesian-Multiplicative Replacement, You cannot have singeltons! because it needs ASV to occur in more than one sample to estimate the prior distribution.
+
+#Matrix completion:
+
+
+
 
 ### Transformation Applied
-We generate two versions of the data:
-1.  **TSS (Relative Abundance)**: Used for stacked bar plots and descriptive statistics.
-2.  **CLR (Centered Log-Ratio)**: Used for all downstream statistical modeling (PCoA, Correlation, Differential Abundance).
+#We generate two versions of the data:
+#1.  **TSS (Relative Abundance)**: Used for stacked bar plots and descriptive statistics, here no zero imputation is needed.
+#2.  **CLR (Centered Log-Ratio)**: Used for all downstream statistical modeling (PCoA, Correlation, Differential Abundance).
 
-```{r normalization}
+
 # Source the normalization script
 source("../scripts/02_normalization.R")
 
