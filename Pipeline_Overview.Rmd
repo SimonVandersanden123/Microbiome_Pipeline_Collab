@@ -36,8 +36,8 @@ sample_data(mibi_phylo_object) <- mibi_meta_table_new
 #After this step you have the otu count table information, the taxonomy table and the correct or an updated version of the metadata
 
 ```
-## 2.1:Data Pre-processing: Filtering
-```{r}
+## 2.1:Data Pre-processing: Filtering out all non-samples and checking rarefaction curves
+```{r,include=FALSE}
 #Normally some pre filtering has been done on the reads before they were put into the phyloseq object: the sequencing depth threshhold, the decontamination, and some taxonomic filtering of certain undesired taxa such as Eukaryota, Mitochondria and Chloroplast sequences.
 
 # It is possible that that some blancs and mock samples are still present in the samples, these should be filtered out because we will only filter using all the 'real samples'
@@ -49,23 +49,51 @@ mibi_phylo_object <- prune_samples(
 )
 # Check the rarefaction curves:
 source("scripts/02_rarefaction_curves.R")
-
+```
+## 2.1:Data Pre-processing: Filtering out based on prevalence and abundance
+```{r}
 # --- Filtering parameters:USER INPUT SECTION ---
 # Thresholds
-prev_filter_threshold = 3   # Present in at least X samples
-abund_filter_threshold = 1 # At least X reads 
+prev_filter_threshold = 1   # Present in at least X samples
+abund_filter_threshold = 2 # At least X reads 
 
 # Logic Switches (1 = On, 0 = Off)
   # Here you can specify which filtering must be done,
   # Only based on prevalence, or abudance. Then fill in a 0 accordingly
   # Most of the time it is a combination of both prevalence and abundance, for example, at least >10 reads in 5 samples.
-prev_filter = 2 
-abund_filter = 5
+prev_filter = 1 
+abund_filter = 1
 # --------------------------
 # Run the background script
-source("scripts/02_filtering.R")
-# The resulting object 'mibi_phylo_object_filt' is now ready for further processing
+source("scripts/02_filtering_prevalence_abundance.R")
+#The script starts with taking the mibi_phylo_object and makes the: 
+#The resulting object 'mibi_phylo_object_filt' is now ready 
+```
 
+## 2.1:Data Pre-processing: Filtering based on variance OPTIONAL, !!!This is not working yet!!!
+```{r}
+#Check the distribution of the varriances 
+otu <- as.matrix(microbiome::abundances(mibi_phylo_object_filt))
+taxon_variance <- apply(otu, 1, IQR)
+taxon_variance <- apply(as.matrix(microbiome::abundances(mibi_phylo_object_filt)), 1, IQR)> quantile(taxon_variance, probs = seq(0, 1, 0.05))
+
+#This will remove a lot of taxa, since there will be many taxa with 0 variance because they only occur in one sample.
+# --- Filtering parameters: USER INPUT SECTION ---
+# Variance Cutoff (e.g., 0.1 removes the bottom 10% least variable taxa)
+variance_cutoff = 0.00
+
+# Logic Switch (1 = On, 0 = Off)
+variance_filter_switch = 1 
+
+# --------------------------
+# Run the background script
+source("scripts/02_filtering_variance.R")
+#This script starts with mibi_phylo_object_filt and updates it with this filtering 
+# The resulting object 'mibi_phylo_object_filt' is now updated
+```
+
+## 2.1:Data Pre-processing: Sample removal or subset selection
+```{r}
 #Subset selection, this is optional, you can select a specific set of samples.
 # Specify the group you want to isolate
 target_group <- "2A"
@@ -74,8 +102,10 @@ mibi_phylo_object_filt <- subset_samples(mibi_phylo_object, group == target_grou
 # IMPORTANT: Remove ASVs that are no longer present in this specific group
 # (Otherwise you have 1346 ASVs but many might have 0 counts in group 2A)
 mibi_phylo_object_filt <- prune_taxa(taxa_sums(mibi_phylo_object_filt) > 0, mibi_phylo_object_filt)
-
 ```
+
+
+
 2.2:Data Pre-processing: Normalisation
 ```{r}
 ## 2.2 Normalization & The "Zero Problem"
@@ -102,49 +132,56 @@ mibi_phylo_object_filt <- prune_taxa(taxa_sums(mibi_phylo_object_filt) > 0, mibi
 3.1: Calculating alfa diversity metrics
 ```{r}
 #Alpha diversity metrics are a general term for metrics that describe the species richness, evenness, or diversity within a sample. Collectively, these metrics contribute to a comprehensive set of traits characterizing the samples, allowing for the determination of key aspects of the microbial community.
-#4 main categories exist: richness, dominance, phylogenetic and information metrics
-
+#4 main categories 'exist': richness, dominance, phylogenetic and information metrics
+#Define the object you want to use for the alfa diversity calculations, be carefull since normalisation and filtering methods have a great impact on these traits.
 alfa_diversity_phyloseq_object <-mibi_phylo_object_filt
 # --- USER INPUT SECTION: Select Community Traits ---
-# 1. Richness (How many?)
+# 1. Richness - options: observed, chao1
 selected_richness <- c('observed', 'chao1') 
 
-# 2. Dominance (Who is the power player?)
+# 2. Dominance - options: dbp, dmn, absolute, relative, simpson, core_abundance, gini 
 selected_dominance <- c('absolute', 'dbp') 
 
-# 3. Evenness (How fair is the distribution?)
-selected_evenness <- c('pielou', 'simpson', 'evar')
+# 3. Evenness - options:camargo, pielou, simpson, evar, bulla
+selected_evenness <- c('pielou')
 
-# 4. Information (Mathematical entropy/uncertainty)
+# 4. Information- options: inverse_simpson, gini_simpson, shannon, fisher
 selected_information <- c('shannon') 
 # --------------------------------------------------
 # Run background script
 source("scripts/04_alpha_diversity.R")
 # Display results
 knitr::kable(head(alpha_output))
-
 ```
 3.1: Alpha diversity visualisation
 ```{r}
-
 #We visualize the distribution of community traits across our experimental groups. Note that the Y-axis scales are "free" because the units for Richness (counts) and Dominance (0-1) are fundamentally different.  
-  
+
 # --- PLOT SETTINGS: USER INPUT ---
-plot_x_axis <- "group"     # What is on the X-axis? (e.g., "Timepoint", "group")
-plot_color_by <- "group"       # What defines the colors? (e.g., "group", "replicate")
+#Check the 'alpha output' table for the grouping you can put your data into.
+plot_x_axis <- "Timepoint"     # What is on the X-axis? (e.g., "Timepoint", "group")
+plot_color_by <- "Carbon_source"    # What defines the colors? (e.g., "group", "replicate")
 plot_metrics <- all_requested_cols # Use all calculated, or specific ones: c("observed", "diversity_shannon")
 
 # Optional: Wrap the plot into how many columns?
 plot_cols <- 3 
-
 # ---------------------------------
 source("scripts/04_1_alpha_plots.R")
-
-
 plot(alpha_boxplot)
+```
+# Beta diversity calculations
+```{r}
+
+
 
 
 ```
+
+
+
+
+
+
 
 
 
