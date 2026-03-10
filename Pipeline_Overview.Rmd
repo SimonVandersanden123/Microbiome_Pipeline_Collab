@@ -12,12 +12,10 @@ library(dplyr)
 library(picante)    # For Phylogenetic Diversity
 library(microbiome) # For Dominance metrics
 ```
-
-
 ## 1:Inspecting the different parts of the phyloseq object
 ```{r,include=FALSE}
 #Load in the phyloseq object
-source("scripts/01_load_phyloseq.R") 
+mibi_phylo_object <- readRDS("data/ps_IdTax_noncontam_NoMitChlo_Tree.rds") 
 # To see the OTU table
 mibi_otu_table<- as(otu_table(mibi_phylo_object), "matrix")
 head(mibi_otu_table[,1:5])
@@ -29,7 +27,7 @@ mibi_meta_table <- as(sample_data(mibi_phylo_object), "data.frame")
 head(mibi_tax_table)
 
 # You can also swap the metadata table, in case you want to make adjustments to the grouping of the samples or add some new metadata the the specific samples
-mibi_meta_table_new <- read.table("data/META_Griftpark_Enrichments_Form.txt", header = T, sep = "\t", row.names = 1, stringsAsFactors = FALSE, dec = ',')
+mibi_meta_table_new <- read.table("data/META_Griftpark_Soilcore.txt", header = T, sep = "\t", row.names = 1, stringsAsFactors = FALSE, dec = ',')
 
 sample_data(mibi_phylo_object) <- mibi_meta_table_new
 
@@ -54,8 +52,8 @@ source("scripts/02_rarefaction_curves.R")
 ```{r}
 # --- Filtering parameters:USER INPUT SECTION ---
 # Thresholds
-prev_filter_threshold = 1   # Present in at least X samples
-abund_filter_threshold = 2 # At least X reads 
+prev_filter_threshold = 3   # Present in at least X samples
+abund_filter_threshold = 5 # At least X reads 
 
 # Logic Switches (1 = On, 0 = Off)
   # Here you can specify which filtering must be done,
@@ -116,16 +114,16 @@ mibi_phylo_object_filt <- prune_taxa(taxa_sums(mibi_phylo_object_filt) > 0, mibi
 
 #Watch out: for Bayesian-Multiplicative Replacement, You cannot have singeltons! because it needs ASV to occur in more than one sample to estimate the prior distribution.
 
+
 #Matrix completion:
 
-
-
-
+source("scripts/03_normalisation.R")
 ### Transformation Applied
 #We generate two versions of the data:
 #1.  **TSS (Relative Abundance)**: Used for stacked bar plots and descriptive statistics, here no zero imputation is needed.
 #2.  **CLR (Centered Log-Ratio)**: Used for all downstream statistical modeling (PCoA, Correlation, Differential Abundance).
-
+#These objects are formed:
+#mibi_tss, #mibi_pseudo_clr, #mibi_bmr_clr 
 
 ```
 
@@ -159,8 +157,8 @@ knitr::kable(head(alpha_output))
 
 # --- PLOT SETTINGS: USER INPUT ---
 #Check the 'alpha output' table for the grouping you can put your data into.
-plot_x_axis <- "Timepoint"     # What is on the X-axis? (e.g., "Timepoint", "group")
-plot_color_by <- "Carbon_source"    # What defines the colors? (e.g., "group", "replicate")
+plot_x_axis <- "SampleID.1"     # What is on the X-axis? (e.g., "Timepoint", "group")
+plot_color_by <- "SC_Number"    # What defines the colors? (e.g., "group", "replicate")
 plot_metrics <- all_requested_cols # Use all calculated, or specific ones: c("observed", "diversity_shannon")
 
 # Optional: Wrap the plot into how many columns?
@@ -171,13 +169,42 @@ plot(alpha_boxplot)
 ```
 # Beta diversity calculations
 ```{r}
+#Beta diversity quantifies the "distance" or "dissimilarity" between pairs of samples. To provide a non-redundant and complete overview, we categorize these metrics based on whether they consider abundance (quantitative) and phylogeny (evolutionary relatedness).
+# --- Beta Diversity Parameters: USER INPUT SECTION ---
+beta_metric = "wunifrac"   # Options: "jaccard", "bray", "unifrac", "wunifrac", "aitchison"
+clr_variant = "BMR"         # Options: "BMR" or "pseudo"
+color_var = "SC_Number"         # Metadata column for grouping
+# --------------------------
 
-
-
+# Run Calculation Script
+source("scripts/05_beta_diversity_calc.R")
 
 ```
 
 
+# Beta diversity visualisations
+```{r}
+## Beta Diversity Plotting
+# Define your grouping variable here to match your metadata
+color_var = "SC_Number" # Change this to "Timepoint" or "replicate" as needed
+
+# Get the p-value for the title
+p_val <- permanova_res$`Pr(>F)`[1]
+
+# Create the plot
+p_beta <- plot_ordination(ps_work, ord_beta, color = color_var) + 
+  geom_point(size = 4, alpha = 0.8) + 
+  stat_ellipse(aes(group = .data[[color_var]]), linetype = 2) + 
+  theme_bw() +
+  labs(title = paste(toupper(beta_metric), "Ordination"),
+       subtitle = paste("PERMANOVA p-value:", p_val),
+       color = color_var) +
+  theme(aspect.ratio = 1, plot.title = element_text(hjust = 0.5))
+
+p_beta
+
+
+```
 
 
 

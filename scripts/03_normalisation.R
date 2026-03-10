@@ -27,7 +27,6 @@ otu_table(mibi_bmr) <- otu_table(t(bmr_counts), taxa_are_rows = TRUE)
 ######################################################################################
 # Method 3: Matrix completion (MC)
 
-
 # 2. Transformation Methods
 # ---------------------------------------
 
@@ -42,7 +41,7 @@ mibi_pseudo_clr <- transform(mibi_pseudo, transform = "clr")
 
 mibi_bmr_clr <- transform(mibi_bmr, transform = "clr")
 
-mibi_mc_clr <- transform(mibi_mc, transform = "clr")
+#mibi_mc_clr <- transform(mibi_mc, transform = "clr")
 # 3. Validation
 # ---------------------------------------
 message("Normalization complete:")
