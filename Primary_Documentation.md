@@ -77,10 +77,14 @@ Removing:
 Eukaryota
 Mitochondria
 Chloroplast
-#### Rarefaction_curves to check if sequencing depth was sufficient
+#### Rarefaction_curves to check if sequencing depth was sufficient:
 
 **rarefaction_curves**: Rarefaction curves plot the number of unique species (ASVs) discovered against the total number of sequences (reads) per sample to determine if the sequencing depth was sufficient to capture the site's full diversity. For data analysis, a curve that reaches a plateau indicates a reliable "steady-state" representation of the community, whereas a steep, rising curve suggests the diversity is under-sampled and the "true" richness remains unknown. Also samples with very low reads are candidates to remove
 #### Filtering that is normal to start the analysis of 'clean ready to go phyloseq objects'
+
+##### Low count or prevalance based filtering is done:
+
+**Removal of singletons**: Remove the features that only occur once in one sample, this will be peformed standard.
 
 We apply filters based on the specific research question. This includes:
 **Prevalence Filtering**: Removing ASVs that appear in only one or two samples, as these may be sequencing artifacts.
@@ -93,13 +97,15 @@ This will : Reduces sparsity, removes potential artifacts, improves statistical 
 
 Example: Remove ASVs with total counts < 10, Remove ASVs with relative abundance < 0.01%
 
-Sample removal is usually based on: 
+##### Then you can filter based on low variance :
+Features that remain nearly constant across the experimental conditions are unlikely to be associated with the conditions being studied. Their variability can be assessed using measures such as the interquartile range (IQR). This is not working yet, need to ask at DSI for input.
 
-**Subset Selection**: This is not strictly a "filter" — it’s more: Stratification, Experimental subsetting.
+##### Sample removal or subset selection
+Sample removal is usually based on: **Subset Selection**: This is not strictly a "filter" — it’s more: Stratification, Experimental subsetting.
 
 Example: Compare “Contaminated” vs “Reference”, Analyze only PAH polluted samples
 
-So it’s analytical selection rather than noise filtering.
+So this step is more analytical selection rather than noise filtering.
 
 #### 2.1 Implementation in R
 To peform these filtering steps you can use this script:
