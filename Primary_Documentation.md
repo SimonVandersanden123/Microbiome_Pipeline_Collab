@@ -175,9 +175,18 @@ Run this using the .Rmd file:
 ## 3.1:Calculating alfa diversity metrics
 ## 3.2:To visualise the alfa diversity metric results 
 ```
+## 3. Beta diversity calculations 
+Beta diversity metrics describe the variation in species composition between samples or along environmental gradients. In the context of contaminated sites, Beta diversity is a critical tool for determining if pollution levels (e.g., heavy metals, hydrocarbons) are "filtering" the microbial community and causing distinct shifts in composition compared to control sites.
+### Beta diversity metrics
+While Alpha diversity tells us how many taxa are in a sample, Beta diversity quantifies the "distance" or "dissimilarity" between pairs of samples. To provide a non-redundant and complete overview, we categorize these metrics based on whether they consider abundance (quantitative) and phylogeny (evolutionary relatedness).
 
+#### Jaccard index:
 
+#### Bray-Curtis index:
 
+#### Phylogenetic-based: Unweighted Unifraq and Weighted Unifraq
+
+#### Aitchison distance:
 
 
 
