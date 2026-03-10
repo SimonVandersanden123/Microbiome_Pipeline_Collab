@@ -175,13 +175,43 @@ Run this using the .Rmd file:
 ## 3.1:Calculating alfa diversity metrics
 ## 3.2:To visualise the alfa diversity metric results 
 ```
+## 3. Beta diversity calculations 
+Beta diversity metrics describe the variation in species composition between samples or along environmental gradients. In the context of contaminated sites, Beta diversity is a critical tool for determining if pollution levels (e.g., heavy metals, hydrocarbons) are "filtering" the microbial community and causing distinct shifts in composition compared to control sites.
+### Beta diversity metrics
+While Alpha diversity tells us how many taxa are in a sample, Beta diversity quantifies the "distance" or "dissimilarity" between pairs of samples. To provide a non-redundant and complete overview, we categorize these metrics based on whether they consider abundance (quantitative) and phylogeny (evolutionary relatedness).
 
+#### Jaccard index:
+A measure that only considers the presence or absence of ASVs. It ignores how many reads a taxon has and focuses purely on whether the same "players" are present in both samples.
+**use case:**Identifying if pollution completely eliminates certain sensitive species.
+#### Bray-Curtis index:
+The most common metric in microbial ecology. It accounts for both the presence of ASVs and their relative abundances.
+**use case:**Highly sensitive to changes in dominant species. In polluted sites, for showing how a few specialized taxa begin to monopolize the community.
+#### Phylogenetic-based: Unweighted Unifraq and Weighted Unifraq
+These metrics use the phylogenetic to determine how related the microbes are. If two samples have different species, but those species are closely related, the distance will be smaller than if the species were from completely different phyla.
 
+**Unweighted UniFrac**: Considers presence/absence and phylogenetic distance. Good for detecting shifts in rare "specialist" lineages.
 
+**Weighted UniFrac**: Considers both phylogeny and abundance. This is often the "Gold Standard" for polluted sites as it emphasizes major shifts in the dominant, active lineages that have evolved to survive the contamination.
 
+#### Aitchison distance: 
+Calculated as the Euclidean distance between samples after a Centered Log-Ratio (CLR) transformation. Unlike Bray-Curtis, this metric is mathematically valid for "Compositional Data." It handles the fact that an increase in one microbe's percentage automatically forces others to decrease, providing a more theoretically sound view of the "fold-changes" in a community. This approach allows for the use of Principal Component Analysis (PCA) as a valid ordination method.
 
+### Beta diversity visualisation:
+Because these distance matrices are multidimensional, we use Ordination techniques to project them into a 2D or 3D space.
 
+**PCoA (Principal Coordinates Analysis)**: Used for Jaccard, Bray-Curtis, and UniFrac. It attempts to represent the distances between samples as accurately as possible.
 
+**PCA (Principal Component Analysis)**: Used specifically with Aitchison Distance. It is highly efficient and preserves the linear relationships between variables.
+
+## 4. Differential abundance analysis
+Differential abundance analysis can be used to identify specific taxa that exhibit significant changes in abundance across experimental conditions or environmental gradients.These 'key players' often serve as biological indicators, providing insights into which microbial lineages are most sensitive or responsible for the observed ecological changes.
+### LinDA 
+Methods such as LinDA (Linear models for Differential Abundance analysis), offer sophisticated approaches which take into account the compositional nature and high sparsity of microbiome datasets.
+
+## 4. Differential abundance analysis
+Differential abundance analysis can be used to identify specific taxa that exhibit significant changes in abundance across experimental conditions or environmental gradients.These 'key players' often serve as biological indicators, providing insights into which microbial lineages are most sensitive or responsible for the observed ecological changes.
+### LinDA 
+Methods such as LinDA (Linear models for Differential Abundance analysis), offer sophisticated approaches which take into account the compositional nature and high sparsity of microbiome datasets.
 
 
 
