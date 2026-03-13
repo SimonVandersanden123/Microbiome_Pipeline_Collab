@@ -1,37 +1,36 @@
-# 02_filtering.R
-# This script filters the phyloseq object based on prevalence and/or abundance
+# scripts/02_filtering_prevalence_abundance.R
+# Requires: mibi_phylo_object, prev_filter_threshold, abund_filter_threshold...
 
-# 1. Define the filtering functions
-# ---------------------------------
+# 1. Validation check: ensure variables exist
+if (!exists("prev_filter_threshold")) stop("Please define prev_filter_threshold in the Rmd.")
 
-# Prevalence: ASV must be present in at least X samples
-# Abundance: ASV must have at least Y reads in those samples
-
+# 2. Execution logic
 if (prev_filter == 1 && abund_filter == 0) {
-  # ONLY PREVALENCE
-  # Function: Sum of samples where count > 0 must be >= threshold
   mibi_phylo_object_filt <- filter_taxa(mibi_phylo_object, function(x) sum(x > 0) >= prev_filter_threshold, prune = TRUE)
-  message("Filtering applied: Prevalence only.")
+  filter_msg <- paste("Prevalence only (min samples:", prev_filter_threshold, ")")
   
 } else if (prev_filter == 0 && abund_filter == 1) {
-  # ONLY ABUNDANCE
-  # Function: ASV must have at least 'abund_filter_threshold' total reads across all samples
   mibi_phylo_object_filt <- filter_taxa(mibi_phylo_object, function(x) sum(x) >= abund_filter_threshold, prune = TRUE)
-  message("Filtering applied: Abundance only.")
+  filter_msg <- paste("Abundance only (min total reads:", abund_filter_threshold, ")")
   
 } else if (prev_filter == 1 && abund_filter == 1) {
-  # BOTH (Strict): Must meet abundance AND prevalence
-  # Function: Number of samples where count >= abundance_threshold must be >= prev_threshold
+  # Strict Combined Filter
   mibi_phylo_object_filt <- filter_taxa(mibi_phylo_object, function(x) sum(x >= abund_filter_threshold) >= prev_filter_threshold, prune = TRUE)
-  message("Filtering applied: Combined Prevalence and Abundance.")
+  filter_msg <- paste("Combined (min", abund_filter_threshold, "reads in", prev_filter_threshold, "samples)")
   
 } else {
-  # NO FILTERING
   mibi_phylo_object_filt <- mibi_phylo_object
-  message("No filtering applied (Check switches).")
+  filter_msg <- "None applied."
 }
 
-# 2. Print result for the report
+# 3. Summary Stats for the User
 ntaxa_before <- ntaxa(mibi_phylo_object)
 ntaxa_after <- ntaxa(mibi_phylo_object_filt)
-cat("Filtered", ntaxa_before - ntaxa_after, "ASVs. Remaining:", ntaxa_after, "\n")
+percent_kept <- round((ntaxa_after / ntaxa_before) * 100, 2)
+
+message("--- Filtering Summary ---")
+message("Criteria: ", filter_msg)
+message("Taxa before: ", ntaxa_before)
+message("Taxa after:  ", ntaxa_after)
+message("Percent kept: ", percent_kept, "%")
+message("-------------------------")
