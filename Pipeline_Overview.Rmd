@@ -223,5 +223,4 @@ source("scripts/05_beta_diversity_visualisation.R")
 plot(p_beta)
 knitr::kable(permanova_res, caption = paste("PERMANOVA results for", beta_metric))
 
-
 ```
