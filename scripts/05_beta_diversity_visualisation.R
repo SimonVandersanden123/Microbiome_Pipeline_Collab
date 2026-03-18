@@ -15,7 +15,7 @@ p_beta <- plot_ordination(ps_beta_input, ord_beta, color = color_var, shape = sh
                   box.padding = 0.5,
                   point.padding = 0.3,
                   segment.color = 'grey50') +
-  
+
   # 4. Styling and Labels
   theme_bw() +
   labs(
@@ -34,5 +34,4 @@ p_beta <- plot_ordination(ps_beta_input, ord_beta, color = color_var, shape = sh
 # 5. Save Output
 if(!dir.exists("results")) dir.create("results")
 ggsave(paste0("results/beta_", beta_metric, "_labeled.png"), p_beta, width = 9, height = 7)
-
 message("Beta diversity plot with labels generated.")
