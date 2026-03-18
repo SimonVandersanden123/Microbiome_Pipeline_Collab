@@ -1,10 +1,8 @@
 # scripts/05_beta_diversity_visualisation.R
-# 1. Base Plot Creation
+# Create the base ordination plot
 p_beta <- plot_ordination(ps_beta_input, ord_beta, color = color_var, shape = shape_var) + 
   geom_point(size = 4, alpha = 0.7) + 
-  
-  # 2. Add Grouping Ellipses
-  # Note: This uses the group_clustering variable defined in your Rmd
+  # Add ellipses to visualize group clustering
   stat_ellipse(aes(group = .data[[group_clustering]]), linetype = 2, alpha = 0.5) + 
   
   # 3. ADDED: Sample Labeling Logic
@@ -22,16 +20,18 @@ p_beta <- plot_ordination(ps_beta_input, ord_beta, color = color_var, shape = sh
     title = paste(toupper(beta_metric), "Ordination"),
     subtitle = paste("PERMANOVA p-value:", format.pval(beta_p_val, digits = 3)),
     color = color_var,
-    caption = paste("Method:", ord_method, "| Data:", clr_variant)
+    caption = paste("Method:", ord_method)
   ) +
   theme(
     aspect.ratio = 1, 
     plot.title = element_text(hjust = 0.5, face = "bold"),
-    legend.position = "right",
-    panel.grid.minor = element_blank()
+    legend.position = "right"
   )
 
-# 5. Save Output
+# Save to results
 if(!dir.exists("results")) dir.create("results")
 ggsave(paste0("results/beta_", beta_metric, "_labeled.png"), p_beta, width = 9, height = 7)
 message("Beta diversity plot with labels generated.")
+ggsave(paste0("results/beta_", beta_metric, ".png"), p_beta, width = 8, height = 7)
+
+message("Beta diversity plot generated.")

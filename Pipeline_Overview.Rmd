@@ -13,9 +13,6 @@ library(picante)    # For Phylogenetic Diversity
 library(microbiome) # For Dominance metrics
 library(vegan)      # For Rarefaction curves
 library(zCompositions)
-library(ggplot2)
-library(ggrepel)
-library(MicrobiomeStat)
 ```
 ## 1:Inspecting the different parts of the phyloseq object
 ```{r,include=TRUE, results='hide'}
@@ -23,16 +20,16 @@ library(MicrobiomeStat)
 mibi_phylo_object <- readRDS("data/ps_IdTax_noncontam_NoMitChlo_Tree.rds") 
 # To see the OTU table
 mibi_otu_table<- as(otu_table(mibi_phylo_object), "matrix")
-#head(mibi_otu_table[,1:5])
+head(mibi_otu_table[,1:5])
 # To see the Taxonomy
 mibi_tax_table <- as(tax_table(mibi_phylo_object), "matrix")
-#head(mibi_tax_table)
+head(mibi_tax_table)
 # To see the Metadata
 mibi_meta_table <- as(sample_data(mibi_phylo_object), "data.frame")
-#head(mibi_tax_table)
+head(mibi_tax_table)
 
 # You can also swap the metadata table, in case you want to make adjustments to the grouping of the samples or add some new metadata the the specific samples
-mibi_meta_table_new <- read.table("data/META_Griftpark_Soilcore_Measurements.txt", header = T, sep = "\t", row.names = 1, stringsAsFactors = FALSE, dec = ',')
+mibi_meta_table_new <- read.table("data/META_Griftpark_Soilcore.txt", header = T, sep = "\t", row.names = 1, stringsAsFactors = FALSE, dec = ',')
 #Make sure the rownames of the loaded in metadata match the sample names in the phyloseq object
 stopifnot(all(sample_names(mibi_phylo_object) %in% rownames(mibi_meta_table_new)))
 
@@ -120,7 +117,6 @@ message(paste("Taxa remaining after pruning zeros:", ntaxa(mibi_phylo_object_sub
 # Define which object flows into the analysis scripts
 # Options: mibi_phylo_object_filt (full) or mibi_phylo_object_subset (subset)
 ps_work <- mibi_phylo_object_filt
-#str(ps_work)
 
 ```
 
@@ -208,128 +204,23 @@ Beta diversity quantifies the "distance" or "dissimilarity" between pairs of sam
 
 > **Note:** For Aitchison, we use the CLR-imputed objects. For Bray, Jaccard, and UniFrac, we use Total Sum Scaling (TSS) to ensure sequencing depth doesn't bias the distances.
 
-```{r, simple visualisation}
+```{r}
+
 # --- USER INPUT: Beta Diversity Configuration ---
 beta_metric = "wunifrac"    # Options: "aitchison", "bray", "jaccard", "unifrac", "wunifrac"
 clr_variant = "BMR"         # If using Aitchison, select: "BMR" or "pseudo"
 color_var   = "Groundwater_level"    # Metadata column for grouping/colors
 shape_var   = NULL           # Optional: Metadata column for shapes (or NULL)
 group_clustering <- "Groundwater_level"
-shape_var <- "SC_Number"
+
 # 1. Run Calculation (Ordination & PERMANOVA)
 source("scripts/05_beta_diversity_calc.R")
+
 # 2. Run Visualization
 source("scripts/05_beta_diversity_visualisation.R")
+
 # Display Plot and PERMANOVA results
 plot(p_beta)
 knitr::kable(permanova_res, caption = paste("PERMANOVA results for", beta_metric))
 
 ```
-## 5.2 Advanced Ordination: Environmental Correlation PCA variant
-#In this section, we upgrade the ordination by mapping environmental variables (vectors) and group shapes (hulls) onto the microbial landscape.
-```{r advanced_beta_vis PCA}
-# --- USER INPUT: Beta Diversity Configuration ---
-beta_metric      <- "aitchison" # only aitchison possible since it is PCA ordination
-clr_variant      <- "BMR"
-color_var        <- "Groundwater_level"
-group_clustering <- "Groundwater_level"
-shape_var        <- "SC_Number"
-
-# 1. Run Calculation (Ordination & PERMANOVA)
-source("scripts/05_beta_diversity_calc.R")
-# UPGRADING OPTIONS, for env fit:
-head(ps_beta_input@sam_data)
-env_variables    <- c("pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.","total.benzene.oxidation.capacity..mg.kg.") # Continuous metadata
-top_asv_n        <- 5    # Show top 5 ASVs driving the plot
-target_level <- "order" #define taxonomic level which is given to the taxa, choose your level here: "genus", "family", "order", "class" "phylum", etc
-# scalinglength of the arrows
-arrow_reduction_taxa <- 5
-arrow_reduction_env <- 2
-
-# Run the advanced script
-source("scripts/05_beta_advanced_vis_PCA.R")
-
-# Display
-plot(p_beta_PCA)
-```
-## 5.3 Advanced Ordination: Environmental Correlation PCoA variant
-```{r advanced_beta_vis PCoA}
-# --- USER INPUT: Beta Diversity Configuration ---
-beta_metric      <- "wunifrac" # Or "bray", "jaccard", "unifrac" 
-color_var        <- "Groundwater_level"
-group_clustering <- "Groundwater_level"
-shape_var        <- "SC_Number"
-# 1. Run Calculation (Ordination & PERMANOVA)
-source("scripts/05_beta_diversity_calc.R")
-
-# UPGRADING OPTIONS:
-env_variables    <- c("pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.","total.benzene.oxidation.capacity..mg.kg.")
-top_asv_n        <- 5    # Show top 5 ASVs driving the plot
-target_level <- "class" #define taxonomic level which is given to the taxa, choose your level here: "genus", "family", "order", "class" "phylum", etc
-# scalinglength of the arrows
-arrow_reduction_taxa <- 0.2
-arrow_reduction_env <- 0.1
-
-# Run the PCoA-specific visualization
-source("scripts/05_beta_advanced_vis_PCoA.R")
-
-# Display
-plot(p_beta_PCoA)
-```
-## 6. Differential_abundance_LinDA.R
-```{r, input script for LinDA}
-## Select you object for analysis: it uses ps_work
-# We use the filtered and not normalised phyloseq object, since LinDA handels the normalisation
-# To make plots readable agglomerate at the selected phylogenetic level
-# select the phylogenetic level to what the taxa should be agglomerated.
-target_level_linda <- "family" # "species", "genus", "family", "order", "class" "phylum"
-source("scripts/06_preparing_object_for_Linda.R")
-
-# Set your primary comparison and reference group
-main_var <- "Groundwater" # Adjust to match your exact metadata column name
-ref_group <- "Below_GW" #ref_group <- "Below_GW" , depending on the levels of a specific factor.
-
-# Set Reference
-meta_df[[main_var]] <- relevel(factor(meta_df[[main_var]]), ref = ref_group)
-# Define Formula: This model identifies which bacteria significantly change their abundance in response to the parameters defined in the model:
-# Here: Main Effects + Interaction + Random Effect for replicates
-# Grouping_SC = SC1, SC2, etc. (the sampling points)
-linda_formula <- "~ Groundwater* SUM.PAHs..EPA. + (1 | SC_Number)"
-
-#Run Linda:
-# LinDA will drop these anyway, but it's good to be aware.
-linda_res <- linda(
-  feature.dat = otu_tab, 
-  meta.dat = meta_df, 
-  formula = linda_formula,
-  feature.dat.type = "count",
-  prev.filter = 0.10,        # Equivalent to your prev.cut
-  is.winsor = TRUE,          # Enables outlier replacement
-  outlier.pct = 0.03,        # Percentage of outliers to winsorize (default)
-  zero.handling = "imputation", # imputation method, either 'pseudo-count' or imputation, exact imputation strategy can be found here: https://link.springer.com/article/10.1186/s13059-022-02655-5 
-  pseudo.cnt = 0.5,
-  alpha = 0.05,              # FDR significance level
-  p.adj.method = "BH"        # Benjamini-Hochberg adjustment
-)
-#From this linda output you can plot multiple things
-```
-
-# Plotting the Linda results 
-```{r}
-## Plotting & Filtering
-# Define which effect you want to visualize from names(linda_res$output)
-# Example: "Groundwater_levelabove" or "SUM.PAHs..EPA." or the interaction
-print(names(linda_res$output))
-var_to_plot <- "GroundwaterAbove_GW" 
-var_to_plot <- "SUM.PAHs..EPA." 
-var_to_plot <- "GroundwaterAbove_GW:SUM.PAHs..EPA." 
-# The interpretation of these results must be done carefully depending on the Linda input, Think about the model formula, and reference level since these will be essential in interpreting the output
-# For example, if you are working with a model which includes an interaction term. If you specify the reference group as above groundwater, then if you plot the 'SUM.PAHs..EPA.' then you will get how the bacteria differ in log fold change as if the conditions were above groundwater. 
-# Now if we are interested in how the bacteria differ in log fold changes with respect to PAH level below groundwater level, we need to change the reference group to below groundwater level to base the model on. 
-# There is the possibility: "Groundwater_levelbelow:SUM.PAHs..EPA." which will indicate how the taxa 'respond to PAH levels below groundwater level' but the interaction term changes the interpretation greatly. So be carefull with the interpretation.
-source("scripts/06_differential_abundance_LinDA.R")
-```
-
-
-
-
