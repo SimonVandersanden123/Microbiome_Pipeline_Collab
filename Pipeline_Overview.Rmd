@@ -277,34 +277,24 @@ source("scripts/05_beta_advanced_vis_PCoA.R")
 plot(p_beta_PCoA)
 ```
 ## 6. Differential_abundance_LinDA.R
-```{r, 06_differential_abundance_LinDA}
-## Select you object for analysis: it uses ps_work, since linda uses the raw count table and does the normalization internally.
+```{r, input script for LinDA}
+## Select you object for analysis: it uses ps_work
 # We use the filtered and not normalised phyloseq object, since LinDA handels the normalisation
-# to a specific phylogenetic level, to make plots readable agglomerate at the selected phylogenetic level
+# To make plots readable agglomerate at the selected phylogenetic level
 # select the phylogenetic level to what the taxa should be agglomerated.
 target_level_linda <- "family" # "species", "genus", "family", "order", "class" "phylum"
-ps_glommed <- phyloseq::tax_glom(ps_work, taxrank = target_level_linda, NArm = TRUE) #In this step all ASVs which have the same taxonomic level will be agglomerated.
-# For plotting we need to change the sequences in the OTU table to a specific taxonomic label
-otu_tab <- as.data.frame(t(otu_table(ps_glommed)))# extract the OTU table from the agglomerated object
-tax_tab <- as.data.frame(tax_table(ps_glommed)) # extract the taxonomy table from the agglomerated object
-#Select the specific phylogenetic level you want to have the labels from:
-taxa_ids <- tax_tab[, target_level_linda] #Here the phylogenetic level collumn is extracted, This level of interest
+source("scripts/06_preparing_object_for_Linda.R")
 
-#is then added to the otu and tax table in the following line: 
-rownames(otu_tab) <- taxa_ids
-rownames(tax_tab) <- taxa_ids
-#extract the metadata
-meta_df <- data.frame(sample_data(ps_work))
 # Set your primary comparison and reference group
-main_var <- "Groundwater_level" # Adjust to match your exact metadata column name
-ref_group <- "above" 
-#ref_group <- "below" 
+main_var <- "Groundwater" # Adjust to match your exact metadata column name
+ref_group <- "Below_GW" #ref_group <- "Below_GW" , depending on the levels of a specific factor.
+
 # Set Reference
 meta_df[[main_var]] <- relevel(factor(meta_df[[main_var]]), ref = ref_group)
 # Define Formula: This model identifies which bacteria significantly change their abundance in response to the parameters defined in the model:
 # Here: Main Effects + Interaction + Random Effect for replicates
 # Grouping_SC = SC1, SC2, etc. (the sampling points)
-linda_formula <- "~ Groundwater_level * SUM.PAHs..EPA. + (1 | SC_Number)"
+linda_formula <- "~ Groundwater* SUM.PAHs..EPA. + (1 | SC_Number)"
 
 #Run Linda:
 # LinDA will drop these anyway, but it's good to be aware.
@@ -330,14 +320,14 @@ linda_res <- linda(
 # Define which effect you want to visualize from names(linda_res$output)
 # Example: "Groundwater_levelabove" or "SUM.PAHs..EPA." or the interaction
 print(names(linda_res$output))
+var_to_plot <- "GroundwaterAbove_GW" 
 var_to_plot <- "SUM.PAHs..EPA." 
-var_to_plot <- "Groundwater_levelbelow:SUM.PAHs..EPA." 
-var_to_plot <- "Groundwater_levelbelow" 
+var_to_plot <- "GroundwaterAbove_GW:SUM.PAHs..EPA." 
 # The interpretation of these results must be done carefully depending on the Linda input, Think about the model formula, and reference level since these will be essential in interpreting the output
-# For example, if you are working with a model which includes an interaction term. If you specify the reference group as above groundwater, then if you plot the 'SUM.PAHs..EPA.' then you will get how the bacteria differ in log fold change as if the conditions were above groundwater. Now we are interested in how the bacteria differ in log fold changes with respect to PAH level below groundwater level; for this there is the possibility: "Groundwater_levelbelow:SUM.PAHs..EPA." which will indicate how the taxa 'respond to PAH levels below groundwater level'. So be carefull with the interpretation.
+# For example, if you are working with a model which includes an interaction term. If you specify the reference group as above groundwater, then if you plot the 'SUM.PAHs..EPA.' then you will get how the bacteria differ in log fold change as if the conditions were above groundwater. 
+# Now if we are interested in how the bacteria differ in log fold changes with respect to PAH level below groundwater level, we need to change the reference group to below groundwater level to base the model on. 
+# There is the possibility: "Groundwater_levelbelow:SUM.PAHs..EPA." which will indicate how the taxa 'respond to PAH levels below groundwater level' but the interaction term changes the interpretation greatly. So be carefull with the interpretation.
 source("scripts/06_differential_abundance_LinDA.R")
-
-
 ```
 
 

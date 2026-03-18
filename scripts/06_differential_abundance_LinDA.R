@@ -3,7 +3,12 @@
 
 # Identify the numeric position of the selected variable to plot
 idx <- which(names(linda_res$output) == var_to_plot)
-
+plots <- linda.plot(
+  linda.obj = linda_res,
+  variables.plot = names(linda_res$output), # This ensures all variables are plotted
+  alpha = 0.05,                             # Significance threshold
+  lfc.cut = 1                               # Log-Fold Change threshold for highlighting
+)
 # Extract the data using the index
 plot_data <- plots$plot.lfc[[idx]]$data
 
