@@ -75,12 +75,12 @@ p_beta_PCA <- ggplot(ordination_df, aes(x = Dim1, y = Dim2,
   
   theme_minimal() +
   labs(
-    title = paste(toupper(beta_metric), "Pimped PCA (Aitchison)"),
+    title = paste(toupper(beta_metric), "Upgraded PCA (Aitchison)"),
     subtitle = paste("PERMANOVA p-value:", format.pval(beta_p_val, digits = 3)),
     caption = "Black = Sig. Env Factors | Blue = Top Contributing Taxa"
   ) +
   theme(aspect.ratio = 1, legend.position = "right", text = element_text(size = 12))
 
 # 5. Save Output
-ggsave(paste0("results/PCA_pimped_", beta_metric, ".png"), p_beta_PCA, width = 10, height = 8)
-message("Pimped PCA plot generated.")
+ggsave(paste0("results/PCA_Upgraded_", beta_metric, ".png"), p_beta_PCA, width = 10, height = 8)
+message("Upgraded PCA plot generated.")

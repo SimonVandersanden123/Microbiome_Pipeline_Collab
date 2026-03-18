@@ -226,7 +226,7 @@ knitr::kable(permanova_res, caption = paste("PERMANOVA results for", beta_metric
 
 ```
 ## 5.2 Advanced Ordination: Environmental Correlation PCA variant
-#In this section, we pimp the ordination by mapping environmental variables (vectors) and group shapes (hulls) onto the microbial landscape.
+#In this section, we upgrade the ordination by mapping environmental variables (vectors) and group shapes (hulls) onto the microbial landscape.
 ```{r advanced_beta_vis PCA}
 # --- USER INPUT: Beta Diversity Configuration ---
 beta_metric      <- "aitchison" # only aitchison possible since it is PCA ordination
@@ -237,7 +237,7 @@ shape_var        <- "SC_Number"
 
 # 1. Run Calculation (Ordination & PERMANOVA)
 source("scripts/05_beta_diversity_calc.R")
-# PIMPING OPTIONS, for env fit:
+# UPGRADING OPTIONS, for env fit:
 head(ps_beta_input@sam_data)
 env_variables    <- c("pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.","total.benzene.oxidation.capacity..mg.kg.") # Continuous metadata
 top_asv_n        <- 5    # Show top 5 ASVs driving the plot
@@ -262,7 +262,7 @@ shape_var        <- "SC_Number"
 # 1. Run Calculation (Ordination & PERMANOVA)
 source("scripts/05_beta_diversity_calc.R")
 
-# PIMPING OPTIONS:
+# UPGRADING OPTIONS:
 env_variables    <- c("pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.","total.benzene.oxidation.capacity..mg.kg.")
 top_asv_n        <- 5    # Show top 5 ASVs driving the plot
 target_level <- "class" #define taxonomic level which is given to the taxa, choose your level here: "genus", "family", "order", "class" "phylum", etc
