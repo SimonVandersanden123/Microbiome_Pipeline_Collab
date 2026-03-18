@@ -1,60 +1,40 @@
 # 06_differential_abundance_LinDA.R
-# Differential abundance using Linear Models for Microbiome Compositional Data
+# This script handels the plotting of the linda output results, to allow for a good customisation
 
-# 1. Prepare Data from Phyloseq
-# -------------------------------------------
-# Use the filtered counts (not normalized)
-otu_tab <- as.data.frame(otu_table(ps_work))
-# LinDA expects features as rows
-if(!taxa_are_rows(ps_work)) { otu_tab <- t(otu_tab) }
+# Identify the numeric position of the selected variable to plot
+idx <- which(names(linda_res$output) == var_to_plot)
 
-meta_df <- data.frame(sample_data(ps_work))
+# Extract the data using the index
+plot_data <- plots$plot.lfc[[idx]]$data
 
-# 2. Configuration & Reference Setting
-# -------------------------------------------
-# This is done in the .Rmd file
+# Clean and Filter
+plot_data_clean <- plot_data %>%
+  filter(bias == "Debiased") %>%
+  filter(Taxa != "27F-1492R") %>% # Remove specific noise
+  filter(abs(Log2FoldChange) >= 1) %>%
+  mutate(Taxa = reorder(Taxa, Log2FoldChange)) # Reorder for the plot
 
-# 3. Run LinDA
-# -------------------------------------------
-# This is done in the .Rmd file
-# 4. Extract and Annotate Results
-# -------------------------------------------
-# Let's look at the interaction effect or the main effect
-# Check available variables: print(names(linda_res$output))
-var_to_plot <- "Groundwater_PositionBelow_GW" # Example variable
+# 6. The "Good Plot"
+good_plot <- ggplot(plot_data_clean, aes(x = Taxa, y = Log2FoldChange)) +
+  geom_pointrange(aes(
+    ymin = Log2FoldChange - lfcSE,
+    ymax = Log2FoldChange + lfcSE,
+    color = Log2FoldChange < 0
+  )) +
+  scale_color_manual(values = c("FALSE" = "#00aeb5", "TRUE" = "indianred1")) +
+  coord_flip() +
+  theme_minimal() +
+  labs(
+    title = paste("Effect of", var_to_plot),
+    subtitle = paste("Agglomerated at", target_level_linda, "level"),
+    x = "", y = "Log2 Fold Change (Debiased)"
+  ) +
+  theme(axis.text.y = element_text(size = 11), legend.position = "none")
+plot(good_plot)
+# 7. Safe Saving
+output_dir <- "results/linda/plots"
+if(!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
-# Create a results table with Taxonomy for the specific variable
-res_df <- as.data.frame(linda_res$output[[var_to_plot]])
-tax_tab <- as.data.frame(tax_table(ps_work))
-res_df <- merge(res_df, tax_tab, by = "row.names")
-colnames(res_df)[1] <- "ASV_ID"
-
-# 5. Visualisation
-# -------------------------------------------
-if(!dir.exists("results/linda")) dir.create("results/linda", recursive = TRUE)
-
-# Generate plots for all variables in the model
-plots <- linda.plot(
-  linda.obj = linda_res,
-  variables.plot = names(linda_res$output),
-  titles = names(linda_res$output),
-  alpha = 0.05,
-  lfc.cut = 1,
-  legend = TRUE
-)
-
-# Save Volcano Plot for the main variable
-ggsave(
-  filename = paste0("results/linda/Volcano_", var_to_plot, ".png"),
-  plot = plots$plot.volcano[[1]],
-  width = 12, height = 9
-)
-
-# Save LFC Plot (Log Fold Change)
-ggsave(
-  filename = paste0("results/linda/LFC_Plot_", var_to_plot, ".png"),
-  plot = plots$plot.lfc[[1]],
-  width = 10, height = 12
-)
-
-message("LinDA analysis complete. Significant taxa found for ", var_to_plot, ": ", sum(res_df$reject))
+safe_name <- gsub("[^a-zA-Z0-9]", "_", var_to_plot)
+ggsave(file.path(output_dir, paste0("final_linda_", safe_name, ".png")), 
+       plot = good_plot, width = 8, height = 7)
