@@ -112,6 +112,6 @@ p_beta_PCoA <- ggplot(ordination_df, aes(x = Axis.1, y = Axis.2,
 
 # 5. Save Output
 if(!dir.exists("results")) dir.create("results")
-ggsave(paste0("results/PCoA_upgraded_", beta_metric, ".png"), plot = p_beta_PCoA, width = 10, height = 8)
+ggsave(paste0("results/PCoA_upgraded_", beta_metric, ".png"), plot = p_beta_PCoA, width = 12, height = 8, dpi = 300)
 
 message("PCoA Upgraded plot successfully generated using SV base logic.")

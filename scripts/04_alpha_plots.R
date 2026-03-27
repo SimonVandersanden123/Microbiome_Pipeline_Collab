@@ -21,8 +21,4 @@ alpha_boxplot <- ggplot(plot_data, aes(x = .data[[plot_x_axis]], y = Value, fill
        x = plot_x_axis, y = "Index Value", fill = plot_color_by) +
   theme(strip.text = element_text(face = "bold"), legend.position = "bottom")
 
-# 3. Save
-if(!dir.exists("results")) dir.create("results")
-ggsave("results/alpha_diversity_plot.png", alpha_boxplot, width = 10, height = 7)
-
-message("Alpha plot saved to results/ folder.")
+message("Alpha plot generated.")

@@ -42,4 +42,4 @@ if(!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
 
 safe_name <- gsub("[^a-zA-Z0-9]", "_", var_to_plot)
 ggsave(file.path(output_dir, paste0("final_linda_", safe_name, ".png")), 
-       plot = good_plot, width = 8, height = 7)
+       plot = good_plot, width = 12, height = 8, dpi = 300)
