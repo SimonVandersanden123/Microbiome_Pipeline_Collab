@@ -82,5 +82,5 @@ p_beta_PCA <- ggplot(ordination_df, aes(x = Dim1, y = Dim2,
   theme(aspect.ratio = 1, legend.position = "right", text = element_text(size = 12))
 
 # 5. Save Output
-ggsave(paste0("results/PCA_Upgraded_", beta_metric, ".png"), p_beta_PCA, width = 10, height = 8)
+ggsave(paste0("results/PCA_Upgraded_", beta_metric, ".png"), p_beta_PCA, width = 12, height = 8, dpi = 300)
 message("Upgraded PCA plot generated.")
