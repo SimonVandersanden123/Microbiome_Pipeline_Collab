@@ -15,15 +15,7 @@ p_beta <- plot_ordination(ps_beta_input, ord_beta, color = color_var, shape = sh
                   box.padding = 0.5,
                   point.padding = 0.3,
                   segment.color = 'grey50') +
-<<<<<<< HEAD
-<<<<<<< HEAD
 
-=======
-  
->>>>>>> parent of 7628505 (Revert "Simon adjustments to main")
-=======
-  
->>>>>>> parent of 7628505 (Revert "Simon adjustments to main")
   # 4. Styling and Labels
   theme_bw() +
   labs(
@@ -42,17 +34,12 @@ p_beta <- plot_ordination(ps_beta_input, ord_beta, color = color_var, shape = sh
 # 5. Save Output
 if(!dir.exists("results")) dir.create("results")
 ggsave(paste0("results/beta_", beta_metric, "_labeled.png"), p_beta, width = 9, height = 7)
-<<<<<<< HEAD
-<<<<<<< HEAD
+
 message("Beta diversity plot with labels generated.")
 ggsave(paste0("results/beta_", beta_metric, ".png"), p_beta, width = 8, height = 7)
 
 message("Beta diversity plot generated.")
-=======
 
-message("Beta diversity plot with labels generated.")
->>>>>>> parent of 7628505 (Revert "Simon adjustments to main")
-=======
 
-message("Beta diversity plot with labels generated.")
->>>>>>> parent of 7628505 (Revert "Simon adjustments to main")
+
+
