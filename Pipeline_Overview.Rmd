@@ -29,7 +29,7 @@ Here you load in you microbiome data, there is a part where sample data can be l
 
 ```{r,include=TRUE, results='hide'}
 # Load in the phyloseq object
-mibi_phylo_object <- readRDS("data/ps_IdTax_noncontam_NoMitChlo_Tree.rds") 
+mibi_phylo_object <- readRDS("data/ps.noncontam_Fast_Tree.rds") 
 # To see the OTU table
 mibi_otu_table<- as(otu_table(mibi_phylo_object), "matrix")
 #head(mibi_otu_table[,1:5])
@@ -40,11 +40,24 @@ mibi_tax_table <- as(tax_table(mibi_phylo_object), "matrix")
 mibi_meta_table <- as(sample_data(mibi_phylo_object), "data.frame")
 # head(mibi_tax_table)
 
+# --- 1. EXTRACT AND CLEAN TAXONOMY ---
+mibi_tax_table <- as(tax_table(mibi_phylo_object), "matrix")
+# Replace all NA values with "Unclassified"
+mibi_tax_table[is.na(mibi_tax_table)] <- "Unclassified"
+# Optional: Also catch empty strings if any exist
+mibi_tax_table[mibi_tax_table == ""] <- "Unclassified"
+
+# Update the phyloseq object with the cleaned tax table
+tax_table(mibi_phylo_object) <- tax_table(mibi_tax_table)
+
+# --- 2. UPDATE METADATA ---
 # You can also swap the metadata table, in case you want to make adjustments to the grouping of the samples or add some new metadata the the specific samples
 mibi_meta_table_new <- read.table("data/META_Griftpark_Soilcore_Measurements.txt", header = T, sep = "\t", row.names = 1, stringsAsFactors = FALSE, dec = ',')
 # Make sure the rownames of the loaded in metadata match the sample names in the phyloseq object
 stopifnot(all(sample_names(mibi_phylo_object) %in% rownames(mibi_meta_table_new)))
 sample_data(mibi_phylo_object) <- mibi_meta_table_new # Here you add the new sample data to the object, you can also add a new phylogenetic tree. with: phy_tree(mibi_phylo_object).
+
+
 # After this step you have the otu count table information, the taxonomy table, phylogenetic tree and the correct or an updated version of the metadata.
 ```
 
@@ -57,10 +70,13 @@ Normally some pre-filtering has been done on the reads before they were put into
 # It is possible that that some blancs and mock samples are still present in the samples, these should be filtered out because we will only filter using all the 'real samples'
 #filter out these blanc samples:
 samples_to_remove <- c("Blank", "MockB", "nosample1", "nosample2", "nosample3", "nosample4")
+samples_to_remove <- c("SV188", "SV189")
 mibi_phylo_object <- prune_samples(
   !(sample_names(mibi_phylo_object) %in% samples_to_remove),
   mibi_phylo_object
 )
+
+
 # Check the rarefaction curves:
 #Requires: mibi_phylo_object
 source("scripts/02_rarefaction_curves.R")
@@ -76,7 +92,7 @@ Here you can filter on prevalence and abundance, you can also select either prev
 # --- Filtering parameters:USER INPUT SECTION ---
 # Thresholds
 # Usually filtering is done both on prevalence and abundance, for example, at least >10 reads in 3 samples.
-prev_filter_threshold = 3   # Present in at least X samples
+prev_filter_threshold = 1   # Present in at least X samples
 abund_filter_threshold = 5 # At least X reads 
 
 # Logic Switches (1 = On, 0 = Off)
@@ -181,11 +197,12 @@ This chunk is designed to plot relative abundances of you microbial community da
 source("scripts/08_barchart_visualisation.R")
 # --- 1. INPUT ---
 # specify the plot specifics:
-high_level <- "order" # Specify the high taxonomic level
-low_level  <- "family" # Specify the lower taxonomic level
+high_level <- "phylum" # Specify the high taxonomic level, capital sensitive
+low_level  <- "order" # Specify the lower taxonomic level
 facet_var  <- "Sample" # or "Grouping_SC or Sample"
 threshold  <- 1 # Specify the relative abundance threshold from which the taxa are filtered
-pal_choice  <- "pals::polychrome" # Define the color pallet to use
+pal_choice  <- "pals::polychrome" 
+# Define the color pallet to use
 # --- 2. CREATION OF THE OBJECT FOR PLOTTING ---
 # Here the previously defined taxa are put into the function that prepares the data for plotting.
 
