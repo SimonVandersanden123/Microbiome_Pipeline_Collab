@@ -1,68 +1,158 @@
 ######################################################################################
-###   __  __       _        _   _         _        _   _         _        ____     ###
-### U|' \/ '|u U  /"\  u   | \ |"|    U  /"\  u   | \ |"|    U  /"\  u   / __"| u  ###
-### \| |\/| |/  \/ _ \/   <|  \| |>    \/ _ \/   <|  \| |>    \/ _ \/   <\___ \/   ###
-###  | |  | |   / ___ \   U| |\  |u    / ___ \   U| |\  |u    / ___ \    u___) |   ###
-###  |_|  |_|  /_/   \_\   |_| \_|    /_/   \_\   |_| \_|    /_/   \_\   |____/>>  ###
-### <<,-,,-.    \\    >>   ||   \\,-.  \\    >>   ||   \\,-.  \\    >>    )(  (__) ###
-###  (./  \.)  (__)  (__)  (_")  (_/  (__)  (__)  (_")  (_/  (__)  (__)  (__)      ###
+###  __  __  ___  ____   ___  ____  ___                                            ###
+### |  \/  ||_ _|| __ ) |_ _|| __ )|_ _|  ___                                      ###
+### | |\/| | | | |  _ \  | | |  _ \ | |  / _ \                                     ###
+### | |  | | | | | |_) | | | | |_) || | | (_) |                                    ###
+### |_|  |_||___||____/ |___||____/|___| \___/                                     ###
+###                                                                                ###
 ######################################################################################
-#  Microbial AmpLicon AnalYses (MAnAnAs)
-#  For more details about the config values: ask Sofie
-######################################################################################
+# (MIBIBIO):Collection of microbial analysis workflows to investigate microbiological community structure, characteristics and their degradation potential.
 
+project_metadata:
+  name: "Griftpark Soilcore Analysis"
+  author: "Simon"
 
-########################
-# Execution parameters
-########################
+paths:
+  phyloseq_rds: "data/ps_IdTax_noncontam_NoMitChlo_Tree.rds"
+  metadata_txt: "data/META_Griftpark_Soilcore_Measurements.txt"
 
-# set directories:
-main_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners'
-input_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners/Input_Sequences/input_dir_vsc'
-config_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners/Config'
-results_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners/Results'
+scripts:
+  #Preprocessing
+  rarefaction: "scripts/02_rarefaction_curves.R"
+  filtering: "scripts/02_filtering_prevalence_abundance.R"
+  variance: "scripts/02_filtering_variance.R"
+  normalization: "scripts/03_normalisation.R"
+  # Barplots
+  barplot_main: "scripts/08_barchart_visualisation.R"
+  barplot_focus: "scripts/08_barchart_specific_group.R"
+  # Alfa-Diversity
+  alpha_calc: "scripts/04_alpha_diversity.R"
+  alpha_plot: "scripts/04_alpha_plots.R"
+  # Beta-Diversity
+  beta_calc: "scripts/05_beta_diversity_calc.R"
+  beta_vis_basic: "scripts/05_beta_diversity_visualisation.R"
+  beta_vis_pca: "scripts/05_beta_advanced_vis_PCA.R"
+  beta_vis_pcoa: "scripts/05_beta_advanced_vis_PCoA.R"
+  # LinDA analysis
+  linda_prepare: "scripts/06_preparing_object_for_Linda.R"
+  linda_plot: "scripts/06_differential_abundance_LinDA.R"
 
-# These are default
-scripts_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners'
+### Parameters used to prepare the dataset before analysis and figure generation.
+analysis_params:
+  unclassified_label: "Unclassified"
+  metadata_sep: "\t"
+  metadata_dec: ","
 
-###############################
-# DADA2: from raw reads to ASV
-###############################
+filtering:  # <--- This is the 'Parent' box for Section 2
+  samples_to_remove: ["Blank", "MockB", "nosample1", "nosample2", "nosample3", "nosample4", "SV188", "SV189"]
+  prev_filter_threshold: 2
+  abund_filter_threshold: 5
+  apply_prevalence: true
+  apply_abundance: true
 
-primer:
- FW: GTGCCAGCMGCCGCGGTAA  # 515f, only for fungi needed
- RV: CCGTCAATTCCTTTGAGTTT  # 907r, only for fungi needed
+variance_filtering:
+  cutoff: 0.00
+  apply_filter: true 
 
-trimlength:					# for the step filter and trim, you need to trim away the bad sequence quality on the forward and reverse read, look at the quality plots to see from which length quality drops
- fwread: 240        # Remember though, when choosing truncLen for paired-end reads you must maintain overlap after truncation in order to merge them later.
- rvread: 240        # some defaults: Miseq 515-907 (392) 2x250 seq, Miseq 515-806 (280:200) Miseq 799-1193 (250:200), IT 341-806 (230), Miseq 341-785 (285:220)
+subsetting:
+  use_subset: false
+  column_name: "SC_Number"
+  target_value: "SC6"
 
-trimleft: 19        # remove the primer sequences (515: 19 but with 8 barcodes)
-trimright: 20       # remove the primer sequences (806: 20)
+### 3.0 Community barcharts parameters
+Barplot_specific:
+  palette_choice: "pals::polychrome"
+  
+  # Section 3.1: Global Community Barplots
+  global_barplots:
+    high_level: "phylum"
+    low_level: "order"
+    facet_var: "Sample"
+    threshold: 1.0 #
+    fig_width: 12
+    fig_height: 8
+    dpi: 300
 
-maxee:              # maximum expected errors. Default is 2,2
- fread: 2           # If too few reads are passing the filter, consider relaxing maxEE, perhaps especially on the reverse reads (eg. maxEE=c(2,5))
- rread: 4          
+  # Section 3.2: Specific Group Focus
+  focus_barplot:
+    target_rank: "order"
+    target_val: "Burkholderiales_2"
+    high_level: "family"
+    low_level: "genus"
+    facet_var: "Sample"
+    threshold: 0.5
+    fig_width: 12
+    fig_height: 8
+    dpi: 300
+### 4.0 Alpha Diversity: Community Trait Analysis
+Alpha_Diversity:
+  # Pillar Selection
+  traits:
+    richness: ['observed', 'chao1']
+    dominance: ['absolute', 'dbp']
+    evenness: ['pielou']
+    information: ['shannon']
+  
+  # Plotting Configuration
+  plotting:
+    x_axis: "SC_Number"
+    color_by: "SC_Number"
+    grid_cols: 2
+    fig_width: 12
+    fig_height: 8
+    dpi: 300
+    # Use 'all' to plot everything, or a specific list like ['observed', 'shannon']
+    selected_metrics: "all"
+### 5.0 Beta Diversity: Community Trait Analysis
+Beta_Diversity:
+  # Global Plotting Settings
+  color_var: "Groundwater_level"
+  shape_var: "SC_Number"
+  group_clustering: "Groundwater_level"
+  fig_width: 12
+  fig_height: 8
 
-# Download links in dada2.pbs
-taxonomydatabase_NavBaysian_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/silva_nr99_v138.2_toGenus_trainset.fa' 
-taxonomydatabase_NavBaysiansp_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/silva_v138.2_assignSpecies.fa' 
-taxonomydatabase_IDTAXA_bac_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/SILVA_SSU_r138_2_2024.RData' 
-taxonomydatabase_IDTAXA_fun_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/UNITE_v2020_February2020.RData' 
-taxonomydatabase_NavBaysian_gr_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/sh_general_release_dynamic_s_all_04.04.2024.fasta' 
-taxonomydatabase_NavBaysian_UI_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/UNITE_public_10.05.2021.fasta' 
+  # Section 5.1: Basic Ordination
+  basic:
+    metric: "wunifrac" # Options: aitchison, bray, jaccard, unifrac, wunifrac
+    clr_variant: "BMR"
 
-# sh_general_release_dynamic_s_all_04.04.2024.fasta, the all refers to with eukaryotes
-# sh_general_release_dynamic_s_04.04.2024.fasta only fungi
+  # Section 5.2 & 5.3: Advanced (Vectors/Environmental Fit)
+  advanced:
+    env_vars: ["pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.", "total.benzene.oxidation.capacity..mg.kg."]
+    top_asv_n: 5
+    target_tax_level: "order"
+    
+    # Scaling for PCA
+    pca_arrow_taxa: 5
+    pca_arrow_env: 2
+    
+    # Scaling for PCoA
+    pcoa_arrow_taxa: 0.2
+    pcoa_arrow_env: 0.1
+### 6.0 LinDA
+Differential_Abundance:
+  target_level: "family"
+  
+  # Model Configuration
+  model:
+    main_var: "Groundwater"
+    ref_group: "Below_GW"
+    # Note: Use double quotes for the formula to handle special characters
+    formula: "~ Groundwater * SUM.PAHs..EPA. + (1 | SC_Number)"
+  
+  # LinDA Algorithmic Parameters
+  params:
+    prev_filter: 0.0050
+    is.winsor: "TRUE"
+    outlier_pct: 0.03
+    zero_handling: "imputation"
+    pseudo_cnt: 0.5
+    alpha: 0.05
+    p_adj_method: "BH"
 
-IdTaxa: 1 # if you want taxonomy assignment via IDTAXA (1), or not (0)
-
-NavBTaxa: 1  # if you want taxonomy assignment via IDTAXA (1), or not (0)
-
-mock: 0 #1 if you have a mock, 0 otherwise
-
-decontamblank: 1 # 1 if you have blank sample to run decontam, 0 otherwise
-
-phylo: 0 #1 if you want to generate a phylo-tree, 0 otherwise (takes several hours)
-
-basic_phylo: 1 #1 if you want to generate a tree using fastree
+  # Visualization
+  plotting:
+    var_to_plot: "SUM.PAHs..EPA." # Must match one of names(linda_res$output)
+    fig_width: 12
+    fig_height: 8
