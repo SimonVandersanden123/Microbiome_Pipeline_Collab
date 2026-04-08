@@ -1,0 +1,68 @@
+######################################################################################
+###   __  __       _        _   _         _        _   _         _        ____     ###
+### U|' \/ '|u U  /"\  u   | \ |"|    U  /"\  u   | \ |"|    U  /"\  u   / __"| u  ###
+### \| |\/| |/  \/ _ \/   <|  \| |>    \/ _ \/   <|  \| |>    \/ _ \/   <\___ \/   ###
+###  | |  | |   / ___ \   U| |\  |u    / ___ \   U| |\  |u    / ___ \    u___) |   ###
+###  |_|  |_|  /_/   \_\   |_| \_|    /_/   \_\   |_| \_|    /_/   \_\   |____/>>  ###
+### <<,-,,-.    \\    >>   ||   \\,-.  \\    >>   ||   \\,-.  \\    >>    )(  (__) ###
+###  (./  \.)  (__)  (__)  (_")  (_/  (__)  (__)  (_")  (_/  (__)  (__)  (__)      ###
+######################################################################################
+#  Microbial AmpLicon AnalYses (MAnAnAs)
+#  For more details about the config values: ask Sofie
+######################################################################################
+
+
+########################
+# Execution parameters
+########################
+
+# set directories:
+main_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners'
+input_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners/Input_Sequences/input_dir_vsc'
+config_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners/Config'
+results_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners/Results'
+
+# These are default
+scripts_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/scripts/1_amplicon_pipeline/Dada2G/2026_DADA2/Script_DADA2_Griftpark_Soilliners'
+
+###############################
+# DADA2: from raw reads to ASV
+###############################
+
+primer:
+ FW: GTGCCAGCMGCCGCGGTAA  # 515f, only for fungi needed
+ RV: CCGTCAATTCCTTTGAGTTT  # 907r, only for fungi needed
+
+trimlength:					# for the step filter and trim, you need to trim away the bad sequence quality on the forward and reverse read, look at the quality plots to see from which length quality drops
+ fwread: 240        # Remember though, when choosing truncLen for paired-end reads you must maintain overlap after truncation in order to merge them later.
+ rvread: 240        # some defaults: Miseq 515-907 (392) 2x250 seq, Miseq 515-806 (280:200) Miseq 799-1193 (250:200), IT 341-806 (230), Miseq 341-785 (285:220)
+
+trimleft: 19        # remove the primer sequences (515: 19 but with 8 barcodes)
+trimright: 20       # remove the primer sequences (806: 20)
+
+maxee:              # maximum expected errors. Default is 2,2
+ fread: 2           # If too few reads are passing the filter, consider relaxing maxEE, perhaps especially on the reverse reads (eg. maxEE=c(2,5))
+ rread: 4          
+
+# Download links in dada2.pbs
+taxonomydatabase_NavBaysian_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/silva_nr99_v138.2_toGenus_trainset.fa' 
+taxonomydatabase_NavBaysiansp_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/silva_v138.2_assignSpecies.fa' 
+taxonomydatabase_IDTAXA_bac_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/SILVA_SSU_r138_2_2024.RData' 
+taxonomydatabase_IDTAXA_fun_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/UNITE_v2020_February2020.RData' 
+taxonomydatabase_NavBaysian_gr_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/sh_general_release_dynamic_s_all_04.04.2024.fasta' 
+taxonomydatabase_NavBaysian_UI_dir_vsc: '/vsc-hard-mounts/leuven-data/361/vsc36150/Taxonomic_Classifiers/UNITE_public_10.05.2021.fasta' 
+
+# sh_general_release_dynamic_s_all_04.04.2024.fasta, the all refers to with eukaryotes
+# sh_general_release_dynamic_s_04.04.2024.fasta only fungi
+
+IdTaxa: 1 # if you want taxonomy assignment via IDTAXA (1), or not (0)
+
+NavBTaxa: 1  # if you want taxonomy assignment via IDTAXA (1), or not (0)
+
+mock: 0 #1 if you have a mock, 0 otherwise
+
+decontamblank: 1 # 1 if you have blank sample to run decontam, 0 otherwise
+
+phylo: 0 #1 if you want to generate a phylo-tree, 0 otherwise (takes several hours)
+
+basic_phylo: 1 #1 if you want to generate a tree using fastree
