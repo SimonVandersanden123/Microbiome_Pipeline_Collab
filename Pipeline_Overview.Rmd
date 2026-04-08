@@ -5,7 +5,22 @@ date: "2026-03-05"
 output:
   html_document: default
   pdf_document: default
+params:
+  config_file: "configs/Config_Griftpark_Soilcore.yaml"
 ---
+
+```{r setup, include=FALSE}
+#working with a configuration file, to make the workflow more flexible.
+library(yaml)
+# SAFETY NET: If params doesn't exist (manual run), manually point to the file
+if (!exists("params") || is.null(params$config_file)) {
+  config_path <- "configs/Config_Griftpark_Soilcore.yaml"
+} else {
+  config_path <- params$config_file
+}
+config <- yaml::read_yaml(config_path)
+```
+
 
 ## Loading in the necessary libraries for basic handeling
 
@@ -22,30 +37,48 @@ library(MicrobiomeStat)
 library(scales)
 library(paletteer)
 library(stringr)
+library(yaml)
 ```
 
 ## 1:Loading in and inspecting the different parts of the phyloseq object
 Here you load in you microbiome data, there is a part where sample data can be linked to the object, so you can quickly add in new sample data for analysis and plotting.
 
-```{r,include=TRUE, results='hide'}
-# Load in the phyloseq object
-mibi_phylo_object <- readRDS("data/ps_IdTax_noncontam_NoMitChlo_Tree.rds") 
-# To see the OTU table
-mibi_otu_table<- as(otu_table(mibi_phylo_object), "matrix")
-#head(mibi_otu_table[,1:5])
-# To see the Taxonomy
-mibi_tax_table <- as(tax_table(mibi_phylo_object), "matrix")
-#head(mibi_tax_table)
-# To see the Metadata
-mibi_meta_table <- as(sample_data(mibi_phylo_object), "data.frame")
-# head(mibi_tax_table)
 
-# You can also swap the metadata table, in case you want to make adjustments to the grouping of the samples or add some new metadata the the specific samples
-mibi_meta_table_new <- read.table("data/META_Griftpark_Soilcore_Measurements.txt", header = T, sep = "\t", row.names = 1, stringsAsFactors = FALSE, dec = ',')
-# Make sure the rownames of the loaded in metadata match the sample names in the phyloseq object
+```{r,include=TRUE, results='hide'}
+# --- 1. LOAD PHYLOSEQ OBJECT ---
+# This uses the path defined in the YAML file.
+mibi_phylo_object <- readRDS(config$paths$phyloseq_rds) 
+# Extract tables for inspection
+mibi_otu_table  <- as(otu_table(mibi_phylo_object), "matrix")
+mibi_tax_table  <- as(tax_table(mibi_phylo_object), "matrix")
+mibi_meta_table <- as(sample_data(mibi_phylo_object), "data.frame")
+
+# --- 2. CLEAN TAXONOMY ---
+# Instead of "Unclassified", we use the variable from your config
+uncl_label <- config$analysis_params$unclassified_label
+
+mibi_tax_table[is.na(mibi_tax_table)] <- uncl_label
+mibi_tax_table[mibi_tax_table == ""]  <- uncl_label
+
+# Update the phyloseq object with cleaned taxonomy
+tax_table(mibi_phylo_object) <- tax_table(mibi_tax_table)
+
+# --- 3. UPDATE METADATA ---
+# We replace the filename, the separator (\t), and the decimal (,) with config values
+mibi_meta_table_new <- read.table(
+  file = config$paths$metadata_txt, 
+  header = TRUE, 
+  sep = config$analysis_params$metadata_sep, 
+  row.names = 1, 
+  stringsAsFactors = FALSE, 
+  dec = config$analysis_params$metadata_dec
+)
+
+# Safety check
 stopifnot(all(sample_names(mibi_phylo_object) %in% rownames(mibi_meta_table_new)))
-sample_data(mibi_phylo_object) <- mibi_meta_table_new # Here you add the new sample data to the object, you can also add a new phylogenetic tree. with: phy_tree(mibi_phylo_object).
-# After this step you have the otu count table information, the taxonomy table, phylogenetic tree and the correct or an updated version of the metadata.
+
+# Link the new metadata to the object
+sample_data(mibi_phylo_object) <- mibi_meta_table_new
 ```
 
 ## 2.1:Data Pre-processing: Filtering out all non-samples and checking rarefaction curves
@@ -55,93 +88,106 @@ Normally some pre-filtering has been done on the reads before they were put into
 
 ```{r,include=TRUE}
 # It is possible that that some blancs and mock samples are still present in the samples, these should be filtered out because we will only filter using all the 'real samples'
-#filter out these blanc samples:
-samples_to_remove <- c("Blank", "MockB", "nosample1", "nosample2", "nosample3", "nosample4")
+# Filter out unwanted samples using the list from the config
+samples_to_remove <- config$filtering$samples_to_remove
+
 mibi_phylo_object <- prune_samples(
   !(sample_names(mibi_phylo_object) %in% samples_to_remove),
   mibi_phylo_object
 )
-# Check the rarefaction curves:
-#Requires: mibi_phylo_object
-source("scripts/02_rarefaction_curves.R")
+# Run the rarefaction script using the path from config
+source(config$scripts$rarefaction)
 ```
-
 ## 2.1:Data Pre-processing: Filtering out based on prevalence and abundance
 
 Often prevalence or abundance filtering is done to remove uncertain features which can be artifacts created. or remove rare sequences, which might not be of interest to us. This is highly customisable so also all features can be kept however often for clarity, features are filtered out.
 Here you can filter on prevalence and abundance, you can also select either prevalence or either abundance.
 
 ```{r}
+# --- Filtering parameters: PULLED FROM CONFIG ---
+prev_filter_threshold  <- config$filtering$prev_filter_threshold
+abund_filter_threshold <- config$filtering$abund_filter_threshold
 
-# --- Filtering parameters:USER INPUT SECTION ---
-# Thresholds
-# Usually filtering is done both on prevalence and abundance, for example, at least >10 reads in 3 samples.
-prev_filter_threshold = 3   # Present in at least X samples
-abund_filter_threshold = 5 # At least X reads 
+# Logic Switches
+# We convert the YAML boolean (true/false) to your script's expected 1/0
+prev_filter  <- as.numeric(config$filtering$apply_prevalence)
+abund_filter <- as.numeric(config$filtering$apply_abundance)
 
-# Logic Switches (1 = On, 0 = Off)
-  # Here you can specify which filtering must be done with 0 or 1 logic
-prev_filter = 1 
-abund_filter = 1
-# --------------------------
 # Run the background script
-# Requires: mibi_phylo_object, prev_filter_threshold, abund_filter_threshold...
-source("scripts/02_filtering_prevalence_abundance.R")
-#The script starts with taking the mibi_phylo_object and makes the: 
-#The resulting object 'mibi_phylo_object_filt' is now ready 
+# Note: Ensure these scripts use the variables defined above!
+source(config$scripts$filtering)
+
+# Resulting object 'mibi_phylo_object_filt' is now ready
 ```
 
 ## 2.1:Data Pre-processing: Filtering based on variance OPTIONAL, !!!This is not working yet!!!Also this should not be used for alpha or beta diversity, However it might be usefull before differential abundance analysis
-
 ```{r}
-#Check the distribution of the varriances 
-otu <- as.matrix(microbiome::abundances(mibi_phylo_object_filt))
-taxon_variance <- apply(otu, 1, IQR)
-taxon_variance <- apply(as.matrix(microbiome::abundances(mibi_phylo_object_filt)), 1, IQR)> quantile(taxon_variance, probs = seq(0, 1, 0.05))
+# --- Variance parameters: PULLED FROM CONFIG ---
+variance_cutoff <- config$variance_filtering$cutoff
+variance_filter_switch <- as.numeric(config$variance_filtering$apply_filter)
 
-#This will remove a lot of taxa, since there will be many taxa with 0 variance because they only occur in one sample.
-# --- Filtering parameters: USER INPUT SECTION ---
-# Variance Cutoff (e.g., 0.1 removes the bottom 10% least variable taxa)
-variance_cutoff = 0.00
-
-# Logic Switch (1 = On, 0 = Off)
-variance_filter_switch = 1 
-# --------------------------
 # Run the background script
-source("scripts/02_filtering_variance.R")
+# Note: This script uses mibi_phylo_object_filt
+source(config$scripts$variance)
+
+# The resulting object 'mibi_phylo_object_filt' is now updated
 #This script starts with mibi_phylo_object_filt and updates it with this filtering 
 # The resulting object 'mibi_phylo_object_filt' is now updated
 ```
 
 ## 2.1:Data Pre-processing: Sample removal or subset selection
 If you have a large dataset or are interested in specific samples, here you can select which samples or groups of samples you want to take a closer look at.
-
+### The script knows whether to subset or keep the full dataset based on the config file
 ```{r}
-# Define the target group you want to subset
-target_group = 'SC6'
-# 1. Subset the samples, here you select the collumn you want to take the specific target group from.
-mibi_phylo_object_subset <- subset_samples(mibi_phylo_object_filt, SC_Number == target_group)
-
-# 2. Corrected Pruning: Sum the counts within the NEW subset
-# This ensures that if an ASV only existed in 'SC1', it is removed from the 'SC2' object. So here you will prune out all taxa which are not found in the defined subset to ensure there is no trouble with these down the road.
-mibi_phylo_object_subset <- prune_taxa(taxa_sums(mibi_phylo_object_subset) > 0, mibi_phylo_object_subset)
-
-# 3. Reporting : An update on what was filtered, and how many taxa are left in this filtered object compared to the initial dataset.
-message(paste("Subset selected:", target_group))
-message(paste("Samples remaining:", nsamples(mibi_phylo_object_subset)))
-message(paste("Taxa present in all samples:", ntaxa(mibi_phylo_object_filt)))
-message(paste("Taxa remaining after pruning zeros:", ntaxa(mibi_phylo_object_subset)))
+if (config$subsetting$use_subset) {
+  
+  target_group <- config$subsetting$target_value
+  target_col   <- config$subsetting$column_name
+  
+  # Professional trick: use 'get' to find the column name dynamically from the string in YAML
+  mibi_phylo_object_subset <- subset_samples(mibi_phylo_object_filt, 
+                                             get(target_col) == target_group)
+  
+  # Remove taxa with zero counts in this specific subset
+  mibi_phylo_object_subset <- prune_taxa(taxa_sums(mibi_phylo_object_subset) > 0, 
+                                         mibi_phylo_object_subset)
+  
+  # Reporting
+  message(paste("Subset selected:", target_group))
+  message(paste("Samples remaining:", nsamples(mibi_phylo_object_subset)))
+  message(paste("Taxa remaining after pruning zeros:", ntaxa(mibi_phylo_object_subset)))
+  
+} else {
+  message("No subsetting applied. Using full filtered dataset.")
+  mibi_phylo_object_subset <- mibi_phylo_object_filt
+}
 ```
-
 ## 2.2 Object selection: selecting the object for the normalisation, and further data analysis.
-
 ```{r}
-# Define which object flows into the analysis scripts
-# Options: mibi_phylo_object_filt (full) or mibi_phylo_object_subset (subset)
-ps_work <- mibi_phylo_object_filt
+# Define which object flows into the analysis scripts.
+# We use the 'subset' object, which is either the actual subset 
+# OR the full dataset (if no subsetting was applied in the previous chunk).
+ps_work <- mibi_phylo_object_subset
+# --- Reporting: Final Object Overview ---
+# 1. Get the total counts
+n_samples <- nsamples(ps_work)
+n_taxa    <- ntaxa(ps_work)
+# 2. Get the names and collapse them into one string
+sample_list_string <- paste(sample_names(ps_work), collapse = ", ")
+
+# 3. Summary of the samples used for downstream analysis
+message("--------------------------------------------------")
+message(paste("PROJECT:", config$project_metadata$name))
+message(paste("ANALYSIS TARGET:", if(config$subsetting$use_subset) config$subsetting$target_value else "Full Dataset"))
+message(paste("TOTAL SAMPLES:", n_samples))
+message(paste("TOTAL TAXA:", n_taxa))
+message("SAMPLES INCLUDED:")
+message(sample_list_string)
+message("--------------------------------------------------")
+
 ```
 
-# 2.2:Data Pre-processing: Normalisation \## 3.0 Normalization & The "Zero Problem"
+# 2.2:Data Pre-processing: Normalisation & The "Zero Problem"
 
 Microbiome data is **compositional**. Because total read counts are an artifact of sequencer depth, they represent "parts of a whole" rather than absolute concentrations. If one taxon blooms, others appear to decrease simply because they occupy a smaller percentage of the total pool.
 
@@ -158,12 +204,15 @@ Log-ratio transformations (like CLR) cannot handle zeros because $\log(0)$ is un
 ### 3.2 Executed Transformations
 The following background script processes the chosen `ps_work` object and generates the normalized data structures, using different methods.
 ```{r}
-# Requires: ps_work (defined in the data pre-processing section)
-source("scripts/03_normalisation.R")
-#The following objects are created: each with a different data normalisation method.
-#mibi_tss
-#mibi_pseudo_clr
-#mibi_bmr_clr
+# Requires: ps_work (defined above)
+# This script will generate: mibi_tss, mibi_pseudo_clr, mibi_bmr_clr
+
+source(config$scripts$normalization)
+
+# Quick check to ensure the objects were created
+if(exists("mibi_tss")) {
+  message("Normalization complete: mibi_tss, mibi_pseudo_clr, and mibi_bmr_clr are ready.")
+}
 ```
 
 ###The script generates three primary objects. Choosing the right one depends on your specific analysis:
@@ -177,38 +226,34 @@ source("scripts/03_normalisation.R")
 # Community visualisation: barplots
 This chunk is designed to plot relative abundances of you microbial community data, this takes the microbial community and you can select at which level the plotting is done, the labeling is two levels to ensure comprehensiveness, and detail (higher phylogenetic level and lower for the detail). The main color is determined by the high level taxonomy, variations of this main color are used in the lower levels. Several choices can be made, a relative abundance threshold level, which is a cutoff level for relative abundance, if a taxon does not meet this threshold i.e. all taxa with relative abundance below this threshold are put into 'Others'
 ```{r plot abundance, fig.width=12, fig.height=8}
-# --- SETUP, load in the script that is the code backbone of this part ---
-source("scripts/08_barchart_visualisation.R")
-# --- 1. INPUT ---
-# specify the plot specifics:
-high_level <- "order" # Specify the high taxonomic level
-low_level  <- "family" # Specify the lower taxonomic level
-facet_var  <- "Sample" # or "Grouping_SC or Sample"
-threshold  <- 1 # Specify the relative abundance threshold from which the taxa are filtered
-pal_choice  <- "pals::polychrome" # Define the color pallet to use
-# --- 2. CREATION OF THE OBJECT FOR PLOTTING ---
-# Here the previously defined taxa are put into the function that prepares the data for plotting.
+# --- SETUP ---
+source(config$scripts$barplot_main)
+# --- 1. INPUT FROM CONFIG ---
+v_glob     <- config$Barplot_specific$global_barplots
+pal_choice <- config$Barplot_specific$palette_choice
 
+# --- 2. PREPARATION ---
 data_for_plot <- prepare_abundance_data(
-  ps         = ps_work, #Here you specify the phyloseq object which you want to plot from
-  high_level = high_level,
-  low_level  = low_level, 
-  facet_var  = facet_var, 
-  threshold  = threshold )
-
+  ps         = ps_work,
+  high_level = v_glob$high_level,
+  low_level  = v_glob$low_level, 
+  facet_var  = v_glob$facet_var, 
+  threshold  = v_glob$threshold 
+)
 # This prepared the colours, so custom colours are assigned to the created groups depending on the taxonomic specification.
 my_colors <- get_shaded_palette(data_for_plot, pal_choice)
 
 # --- 3. DYNAMIC PLOTTING ---
 # This is a complex plotting command that is constructed to take into acount the previously specified parameters, high and low taxonomic levels, relative abundance threshold cutoff, how to group the samples for plotting. So this information is also found on the finally generated plot
-Relative_Abundance_Plot <- ggplot(data_for_plot, aes(x = !!sym(facet_var), y = Abundance, fill = Hierarchical_Label)) +
+Relative_Abundance_Plot <- ggplot(data_for_plot, aes(x = !!sym(v_glob$facet_var), y = Abundance, fill = Hierarchical_Label)) +
   geom_bar(stat = "identity", position = "stack", color = "black", size = 0.05) +
   scale_fill_manual(values = my_colors) +
-  labs(    title = paste("Relative Abundance:", str_to_title(high_level), "-", str_to_title(low_level)),
-    subtitle = paste("Filtered at", threshold, "% threshold | Grouped by", facet_var),
-    x = stringr::str_replace_all(facet_var, "_", " "),
+  labs(
+    title = paste("Relative Abundance:", str_to_title(v_glob$high_level), "-", str_to_title(v_glob$low_level)),
+    subtitle = paste("Filtered at", v_glob$threshold, "% threshold | Grouped by", v_glob$facet_var),
+    x = stringr::str_replace_all(v_glob$facet_var, "_", " "),
     y = "Relative Abundance (%)",
-    fill = paste(str_to_title(high_level), "-", str_to_title(low_level))
+    fill = paste(str_to_title(v_glob$high_level), "-", str_to_title(v_glob$low_level))
   ) +
   theme_minimal(base_size = 12) +
   theme(
@@ -218,40 +263,33 @@ Relative_Abundance_Plot <- ggplot(data_for_plot, aes(x = !!sym(facet_var), y = A
     plot.title = element_text(face = "bold")
   ) +
   guides(fill = guide_legend(ncol = 2))
-# Display the plot and save a copy in the results tab
+
 Relative_Abundance_Plot
 
-ggsave(paste0("results/Relative_Abundance_Plot_", high_level, "_",low_level , ".png"), plot = Relative_Abundance_Plot, width = 12, height = 8, dpi = 300)
+# Save output using config values for naming
+ggsave(paste0("results/Relative_Abundance_Plot_", v_glob$high_level, "_", v_glob$low_level, ".png"), 
+       plot = Relative_Abundance_Plot, width = v_glob$fig_width, height = v_glob$fig_height, dpi = v_glob$dpi)
 ```
 
 ## Community visualisation, detailed group analysis.
 This chunk of code is designed to plot relative abundances of you microbial community data. But here you can look within specific group and get the lower level taxonomic distribution so you can gain insights into specific important groups within you data.The labeling is two levels to ensure comprehensiveness, and detail (higher phylogenetic level and lower for the detail). The main color is determined by the high level taxonomy, variations of this main color are used in the lower levels. Several choices can be made, a relative abundance threshold level, which is a cutoff level for relative abundance, if a taxon does not meet this threshold i.e. all taxa with relative abundance belower this threshold are put into 'Others' 
 ```{r plot specific group abundance, fig.width=12, fig.height=8}
-# --- SETUP, load in the script that is the code backbone of this part ---
-source("scripts/08_barchart_specific_group.R")
-# --- 1. DEFINE SPECIFICS ---
-# These two inputs are specific for this script. Here you select which specific taxon you want to take a closer look at
-target_rank <- "order" # "family", "order", "class" "phylum"
-target_val  <- "Burkholderiales_2" # select the specific group within the target rank e.g. Pseudomonadota for the phylum. Burkholderiales for order
+source(config$scripts$barplot_focus)
+# --- 1. DEFINE SPECIFICS FROM CONFIG ---
+v_foc      <- config$Barplot_specific$focus_barplot
+pal_choice <- config$Barplot_specific$palette_choice
 
 # From this specifically selected group there is the possibility to plot the lower taxonomic levels within it, similar logic to a normal relative abundance plot, but now the relative abundance within this selected taxonomic group is plotted.
 
-high_level  <- "family"
-low_level   <- "genus"
-facet_var   <- "Sample"
-threshold   <- 0.5 
-pal_choice  <- "pals::polychrome"
-
-# --- 2. CREATION OF THE OBJECT FOR PLOTTING ---
-
+# --- 2. PREPARATION ---
 data_subset <- prepare_specific_abundance_data(
   ps         = ps_work,
-  rank_name  = target_rank,
-  rank_value = target_val,
-  high_level = high_level,
-  low_level  = low_level,
-  facet_var  = facet_var,
-  threshold  = threshold
+  rank_name  = v_foc$target_rank,
+  rank_value = v_foc$target_val,
+  high_level = v_foc$high_level,
+  low_level  = v_foc$low_level,
+  facet_var  = v_foc$facet_var,
+  threshold  = v_foc$threshold
 )
 
 # This prepared the colors, so custom colors are assigned to the created groups depending on the taxonomic specification.
@@ -259,15 +297,15 @@ my_colors_sub <- get_shaded_palette(data_subset, pal_choice)# Uses the shared fu
 
 # --- 3. DYNAMIC PLOTTING ---
 # This is a complex plotting command that is constructed to take into acount the previously specified parameters, high and low taxonomic levels, relative abundance threshold cutoff, how to group the samples for plotting. So this information is also found on the finally generated plot
-Specific_Group_Relative_Abundance_Plot <- ggplot(data_subset, aes(x = !!sym(facet_var), y = Abundance, fill = Hierarchical_Label)) +
+Specific_Group_Relative_Abundance_Plot <- ggplot(data_subset, aes(x = !!sym(v_foc$facet_var), y = Abundance, fill = Hierarchical_Label)) +
   geom_bar(stat = "identity", position = "stack", color = "black", size = 0.05) +
   scale_fill_manual(values = my_colors_sub) +
   labs(
-    title = paste("Focus:", target_val, "(", str_to_title(high_level), "-", str_to_title(low_level), ")"),
-    subtitle = paste("Filtered at", threshold, "% internal abundance | Grouped by", facet_var),
-    x = stringr::str_replace_all(facet_var, "_", " "),
-    y = paste("Relative Abundance within", target_val, "(%)"),
-    fill = paste(str_to_title(high_level), "-", str_to_title(low_level))
+    title = paste("Focus:", v_foc$target_val, "(", str_to_title(v_foc$high_level), "-", str_to_title(v_foc$low_level), ")"),
+    subtitle = paste("Filtered at", v_foc$threshold, "% internal abundance | Grouped by", v_foc$facet_var),
+    x = stringr::str_replace_all(v_foc$facet_var, "_", " "),
+    y = paste("Relative Abundance within", v_foc$target_val, "(%)"),
+    fill = paste(str_to_title(v_foc$high_level), "-", str_to_title(v_foc$low_level))
   ) +
   theme_minimal(base_size = 12) +
   theme(
@@ -278,10 +316,10 @@ Specific_Group_Relative_Abundance_Plot <- ggplot(data_subset, aes(x = !!sym(face
   ) +
   guides(fill = guide_legend(ncol = 2))
 
-# Display the plot and save a copy in the results tab
 Specific_Group_Relative_Abundance_Plot
 
-ggsave(paste0("results/Specific_Group_Relative_Abundance_Plot_", target_val, ".png"), plot = Specific_Group_Relative_Abundance_Plot, width = 12, height = 8, dpi = 300)
+ggsave(paste0("results/Specific_Group_Relative_Abundance_Plot_", v_foc$target_val, ".png"), 
+       plot = Specific_Group_Relative_Abundance_Plot, width = v_foc$fig_width, height = v_foc$fig_height, dpi = v_foc$dpi)
 ```
 
 ## 4.0 Alpha Diversity: Community Trait Analysis
@@ -296,31 +334,45 @@ Alpha diversity describes the complexity of a microbial community within a singl
 > **Important:** Alpha diversity calculations are sensitive to normalization. We use the filtered, non-transformed object (`mibi_phylo_object_filt`) to ensure we are counting physical reads, not mathematical ratios.
 
 ```{r plot different alpha diversity measures, fig.width=12, fig.height=8}
-# 1. Input Object (Filtered counts)
-alfa_diversity_phyloseq_object <- mibi_phylo_object_filt
+# --- 1. SETUP & INPUT ---
+# Use the ps work object
+alfa_diversity_phyloseq_object <- ps_work
 
-# 2. USER INPUT: Select Community Traits
-selected_richness    <- c('observed', 'chao1') 
-selected_dominance   <- c('absolute', 'dbp') 
-selected_evenness    <- c('pielou')
-selected_information <- c('shannon') 
+# Pull traits from Config
+selected_richness    <- config$Alpha_Diversity$traits$richness
+selected_dominance   <- config$Alpha_Diversity$traits$dominance
+selected_evenness    <- config$Alpha_Diversity$traits$evenness
+selected_information <- config$Alpha_Diversity$traits$information
 
-# 4. Run Scripts
-source("scripts/04_alpha_diversity.R")
+# --- 2. RUN CALCULATION SCRIPT ---
+# This script uses the variables above to generate 'plot_metrics_all'
+source(config$scripts$alpha_calc)
 
-#We visualize the distribution of community traits across our experimental groups. Note that the Y-axis scales are "free" because the units for Richness (counts) and Dominance (0-1) are fundamentally different.  
+# --- 3. PLOTTING CONFIGURATION ---
+plot_x_axis   <- config$Alpha_Diversity$plotting$x_axis
+plot_color_by <- config$Alpha_Diversity$plotting$color_by
+plot_cols     <- config$Alpha_Diversity$plotting$grid_cols
 
-# 3. USER INPUT: Plotting Configuration
-plot_x_axis   <- "SC_Number" #  What is on the X-axis? (e.g., "Timepoint", "group")
-plot_color_by <- "SC_Number" # What defines the colors? (e.g., "group", "replicate")
-plot_cols     <- 2              # Number of columns in the plot grid
-plot_metrics <- plot_metrics_all
-#plot_metrics <- c("observed", "shannon") # Use all calculated, or specific ones: c("observed", "shannon")
-source("scripts/04_alpha_plots.R")
+# Logic to handle 'all' vs specific metrics
+if (config$Alpha_Diversity$plotting$selected_metrics == "all") {
+  plot_metrics <- plot_metrics_all
+} else {
+  plot_metrics <- config$Alpha_Diversity$plotting$selected_metrics
+}
 
-# Display the plot and save a copy in the results tab
+# --- 4. RUN PLOTTING SCRIPT ---
+source(config$scripts$alpha_plot)
+
+# Display and Save
 plot(alpha_boxplot)
-ggsave("results/alpha_diversity_plot.png", alpha_boxplot, width = 12, height = 8, dpi = 300)
+#We visualize the distribution of community traits across our experimental groups. Note that the Y-axis scales are "free" because the units for Richness (counts) and Dominance (0-1) are fundamentally different.  
+ggsave(
+  filename = "results/alpha_diversity_plot.png", 
+  plot = alpha_boxplot, 
+  width = config$Alpha_Diversity$plotting$fig_width, 
+  height = config$Alpha_Diversity$plotting$fig_height, 
+  dpi = config$Alpha_Diversity$plotting$dpi
+)
 ```
 
 ## 5.0 Beta Diversity: Community Dissimilarity
@@ -335,20 +387,18 @@ Beta diversity quantifies the "distance" or "dissimilarity" between pairs of sam
 > **Note:** For Aitchison, we use the CLR-imputed objects. For Bray, Jaccard, and UniFrac, we use Total Sum Scaling (TSS) to ensure sequencing depth doesn't bias the distances.
 
 ```{r plot different beta diversity measures, fig.width=12, fig.height=8}
-# --- USER INPUT: Beta Diversity Configuration ---
-beta_metric = "wunifrac"    # Options: "aitchison", "bray", "jaccard", "unifrac", "wunifrac"
-clr_variant = "BMR"         # If using Aitchison, select: "BMR" or "pseudo"
-color_var   = "Groundwater_level"    # Metadata column for grouping/colors
-shape_var   = NULL           # Optional: Metadata column for shapes (or NULL)
-group_clustering <- "Groundwater_level"
-shape_var <- "SC_Number"
-# 1. Run Calculation (Ordination & PERMANOVA)
-source("scripts/05_beta_diversity_calc.R")
-# 2. Run Visualization
-source("scripts/05_beta_diversity_visualisation.R")
-# Display Plot and PERMANOVA results
+# --- 1. CONFIG INPUT ---
+beta_metric      <- config$Beta_Diversity$basic$metric
+clr_variant      <- config$Beta_Diversity$basic$clr_variant
+color_var        <- config$Beta_Diversity$color_var
+shape_var        <- config$Beta_Diversity$shape_var
+group_clustering <- config$Beta_Diversity$group_clustering
+
+# --- 2. EXECUTION ---
+source(config$scripts$beta_calc)
+source(config$scripts$beta_vis_basic)
+
 plot(p_beta)
-# Plots are saved within the .R script with and without sample labels 
 ```
 
 ## 5.2 Advanced Ordination: Environmental Correlation PCA variant
@@ -357,93 +407,87 @@ plot(p_beta)
 
 ```{r plot beta diversity measures PCA using aitchison distance, fig.width=12, fig.height=8}
 # --- USER INPUT: Beta Diversity Configuration ---
-beta_metric      <- "aitchison" # only aitchison possible since it is PCA ordination
-clr_variant      <- "BMR"
-color_var        <- "Groundwater_level"
-group_clustering <- "Groundwater_level"
-shape_var        <- "SC_Number"
+# --- 1. CONFIG INPUT ---
+beta_metric      <- "aitchison" 
+clr_variant      <- config$Beta_Diversity$basic$clr_variant
+color_var        <- config$Beta_Diversity$color_var
+shape_var        <- config$Beta_Diversity$shape_var
+group_clustering <- config$Beta_Diversity$group_clustering
 
-# 1. Run Calculation (Ordination & PERMANOVA)
-source("scripts/05_beta_diversity_calc.R")
-# UPGRADING OPTIONS, for env fit:
-head(ps_beta_input@sam_data)
-env_variables    <- c("pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.","total.benzene.oxidation.capacity..mg.kg.") # Continuous metadata
-top_asv_n        <- 5    # Show top 5 ASVs driving the plot
-target_level <- "order" #define taxonomic level which is given to the taxa, choose your level here: "genus", "family", "order", "class" "phylum", etc
-# scalinglength of the arrows
-arrow_reduction_taxa <- 5
-arrow_reduction_env <- 2
+# Advanced parameters
+env_variables        <- config$Beta_Diversity$advanced$env_vars
+top_asv_n            <- config$Beta_Diversity$advanced$top_asv_n
+target_level         <- config$Beta_Diversity$advanced$target_tax_level
+arrow_reduction_taxa <- config$Beta_Diversity$advanced$pca_arrow_taxa
+arrow_reduction_env  <- config$Beta_Diversity$advanced$pca_arrow_env
 
-# Run the advanced script
-source("scripts/05_beta_advanced_vis_PCA.R")
-# Display
+# --- 2. EXECUTION ---
+source(config$scripts$beta_calc)
+source(config$scripts$beta_vis_pca)
+
 plot(p_beta_PCA)
-# Plots are saved within the .R script with and without sample labels
 ```
 
 ## 5.3 Advanced Ordination: Environmental Correlation PCoA variant
 
 ```{r plot beta diversity measures PCoA using various distance matrices as input, fig.width=12, fig.height=8}
 # --- USER INPUT: Beta Diversity Configuration ---
-beta_metric      <- "wunifrac" # Or "bray", "jaccard", "unifrac" 
-color_var        <- "Groundwater_level"
-group_clustering <- "Groundwater_level"
-shape_var        <- "SC_Number"
-# 1. Run Calculation (Ordination & PERMANOVA)
-source("scripts/05_beta_diversity_calc.R")
+# --- 1. CONFIG INPUT ---
+beta_metric      <- config$Beta_Diversity$basic$metric # Usually wunifrac/bray
+color_var        <- config$Beta_Diversity$color_var
+shape_var        <- config$Beta_Diversity$shape_var
+group_clustering <- config$Beta_Diversity$group_clustering
 
-# UPGRADING OPTIONS:
-env_variables    <- c("pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.","total.benzene.oxidation.capacity..mg.kg.")
-top_asv_n        <- 5    # Show top 5 ASVs driving the plot
-target_level <- "class" #define taxonomic level which is given to the taxa, choose your level here: "genus", "family", "order", "class" "phylum", etc
-# scalinglength of the arrows
-arrow_reduction_taxa <- 0.2
-arrow_reduction_env <- 0.1
+# Advanced parameters (PCoA specific scaling)
+env_variables        <- config$Beta_Diversity$advanced$env_vars
+top_asv_n            <- config$Beta_Diversity$advanced$top_asv_n
+target_level         <- "class" # Or pull from config
+arrow_reduction_taxa <- config$Beta_Diversity$advanced$pcoa_arrow_taxa
+arrow_reduction_env  <- config$Beta_Diversity$advanced$pcoa_arrow_env
 
-# Run the PCoA-specific visualization
-source("scripts/05_beta_advanced_vis_PCoA.R")
+# --- 2. EXECUTION ---
+source(config$scripts$beta_calc)
+source(config$scripts$beta_vis_pcoa)
 
-# Display
 plot(p_beta_PCoA)
 ```
 
 ## 6. Differential_abundance_LinDA.R
-
+### We use the filtered and not normalised phyloseq object, since LinDA handels the normalisation
+### To make plots readable agglomerate at the selected phylogenetic level
+### select the phylogenetic level to what the taxa should be agglomerated.
 In this script we do a differential abundance analysis. In the following chunk calculations are made.
 ```{r, input script for LinDA here the model is defined and differental abundance calculations are done}
+# --- 1. PREPARATION ---
+target_level_linda <- config$Differential_Abundance$target_level
+source(config$scripts$linda_prepare)
 
-# We use the filtered and not normalised phyloseq object, since LinDA handels the normalisation
-# To make plots readable agglomerate at the selected phylogenetic level
-# select the phylogenetic level to what the taxa should be agglomerated.
-target_level_linda <- "family" # "species", "genus", "family", "order", "class" "phylum"
-source("scripts/06_preparing_object_for_Linda.R")
+# --- 2. MODEL SETUP ---
+l_mod <- config$Differential_Abundance$model
 
-# Set your primary comparison and reference group
-main_var <- "Groundwater" # Adjust to match your exact metadata column name
-ref_group <- "Below_GW" #ref_group <- "Below_GW" , depending on the levels of a specific factor.
+# Ensure the formula is a single string (R sometimes imports YAML as a list)
+linda_formula_string <- paste(l_mod$formula, collapse = "")
 
-# Set Reference
-meta_df[[main_var]] <- relevel(factor(meta_df[[main_var]]), ref = ref_group)
-# Define Formula: This model identifies which bacteria significantly change their abundance in response to the parameters defined in the model:
-# Here: Main Effects + Interaction + Random Effect for replicates
-# Grouping_SC = SC1, SC2, etc. (the sampling points)
-linda_formula <- "~ Groundwater* SUM.PAHs..EPA. + (1 | SC_Number)"
+# Set Reference dynamically
+meta_df[[l_mod$main_var]] <- relevel(factor(meta_df[[l_mod$main_var]]), 
+                                     ref = l_mod$ref_group)
 
-#Run Linda:
-# LinDA will drop these anyway, but it's good to be aware.
+# --- 3. RUN LINDA ---
+l_params <- config$Differential_Abundance$params
 linda_res <- linda(
-  feature.dat = otu_tab, 
-  meta.dat = meta_df, 
-  formula = linda_formula,
+  feature.dat     = otu_tab, 
+  meta.dat        = meta_df, 
+  formula         = linda_formula_string,
   feature.dat.type = "count",
-  prev.filter = 0.10,        # Equivalent to your prev.cut
-  is.winsor = TRUE,          # Enables outlier replacement
-  outlier.pct = 0.03,        # Percentage of outliers to winsorize (default)
-  zero.handling = "imputation", # imputation method, either 'pseudo-count' or imputation, exact imputation strategy can be found here: https://link.springer.com/article/10.1186/s13059-022-02655-5 
-  pseudo.cnt = 0.5,
-  alpha = 0.05,              # FDR significance level
-  p.adj.method = "BH"        # Benjamini-Hochberg adjustment
+  prev.filter     = l_params$prev_filter,
+  is.winsor       = TRUE,
+  outlier.pct     = l_params$outlier_pct,
+  zero.handling   = l_params$zero_handling,
+  pseudo.cnt      = l_params$pseudo_cnt,
+  alpha           = l_params$alpha,
+  p.adj.method    = l_params$p_adj_method
 )
+
 # From this linda output you can plot multiple things
 ```
 
@@ -455,12 +499,10 @@ For example, if you are working with a model which includes an interaction term.
 Now if we are interested in how the bacteria differ in log fold changes with respect to PAH level below groundwater level, we need to change the reference group to below groundwater level to base the model on.
 
 There is the possibility: "Groundwater_levelbelow:SUM.PAHs..EPA." which will indicate how the taxa 'respond to PAH levels below groundwater level' but the interaction term changes the interpretation greatly. So be carefull with the interpretation.
-```{r plot Differential abundance Results, fig.width=12, fig.height=8}
-## Plotting & Filtering
-# Define which effect you want to visualize from names(linda_res$output)
-# Example: "Groundwater_levelabove" or "SUM.PAHs..EPA." or the interaction
-print(names(linda_res$output))
-var_to_plot <- "GroundwaterAbove_GW" #SUM.PAHs..EPA. or GroundwaterAbove_GW:SUM.PAHs..EPA., this is dependant on the model which was defined in the previous chunk
+```{r plot LinDA results, fig.width=config$Differential_Abundance$plotting$fig_width, fig.height=config$Differential_Abundance$plotting$fig_height}
+# Define which effect to visualize from Config
+var_to_plot <- config$Differential_Abundance$plotting$var_to_plot
 
-source("scripts/06_differential_abundance_LinDA.R")
+# Run the plotting script
+source(config$scripts$linda_plot)
 ```

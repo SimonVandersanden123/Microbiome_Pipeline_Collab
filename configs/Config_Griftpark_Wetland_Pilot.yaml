@@ -1,0 +1,158 @@
+######################################################################################
+###  __  __  ___  ____   ___  ____  ___                                            ###
+### |  \/  ||_ _|| __ ) |_ _|| __ )|_ _|  ___                                      ###
+### | |\/| | | | |  _ \  | | |  _ \ | |  / _ \                                     ###
+### | |  | | | | | |_) | | | | |_) || | | (_) |                                    ###
+### |_|  |_||___||____/ |___||____/|___| \___/                                     ###
+###                                                                                ###
+######################################################################################
+# (MIBIBIO):Collection of microbial analysis workflows to investigate microbiological community structure, characteristics and their degradation potential.
+
+project_metadata:
+  name: "Griftpark Soilcore Analysis"
+  author: "Simon"
+
+paths:
+  phyloseq_rds: "data/ps_IdTax_noncontam_NoMitChlo_Tree.rds"
+  metadata_txt: "data/META_Griftpark_Soilcore_Measurements.txt"
+
+scripts:
+  #Preprocessing
+  rarefaction: "scripts/02_rarefaction_curves.R"
+  filtering: "scripts/02_filtering_prevalence_abundance.R"
+  variance: "scripts/02_filtering_variance.R"
+  normalization: "scripts/03_normalisation.R"
+  # Barplots
+  barplot_main: "scripts/08_barchart_visualisation.R"
+  barplot_focus: "scripts/08_barchart_specific_group.R"
+  # Alfa-Diversity
+  alpha_calc: "scripts/04_alpha_diversity.R"
+  alpha_plot: "scripts/04_alpha_plots.R"
+  # Beta-Diversity
+  beta_calc: "scripts/05_beta_diversity_calc.R"
+  beta_vis_basic: "scripts/05_beta_diversity_visualisation.R"
+  beta_vis_pca: "scripts/05_beta_advanced_vis_PCA.R"
+  beta_vis_pcoa: "scripts/05_beta_advanced_vis_PCoA.R"
+  # LinDA analysis
+  linda_prepare: "scripts/06_preparing_object_for_Linda.R"
+  linda_plot: "scripts/06_differential_abundance_LinDA.R"
+
+### Parameters used to prepare the dataset before analysis and figure generation.
+analysis_params:
+  unclassified_label: "Unclassified"
+  metadata_sep: "\t"
+  metadata_dec: ","
+
+filtering:  # <--- This is the 'Parent' box for Section 2
+  samples_to_remove: ["Blank", "MockB", "nosample1", "nosample2", "nosample3", "nosample4", "SV188", "SV189"]
+  prev_filter_threshold: 2
+  abund_filter_threshold: 5
+  apply_prevalence: true
+  apply_abundance: true
+
+variance_filtering:
+  cutoff: 0.00
+  apply_filter: true 
+
+subsetting:
+  use_subset: false
+  column_name: "SC_Number"
+  target_value: "SC6"
+
+### 3.0 Community barcharts parameters
+Barplot_specific:
+  palette_choice: "pals::polychrome"
+  
+  # Section 3.1: Global Community Barplots
+  global_barplots:
+    high_level: "phylum"
+    low_level: "order"
+    facet_var: "Sample"
+    threshold: 1.0 #
+    fig_width: 12
+    fig_height: 8
+    dpi: 300
+
+  # Section 3.2: Specific Group Focus
+  focus_barplot:
+    target_rank: "order"
+    target_val: "Burkholderiales_2"
+    high_level: "family"
+    low_level: "genus"
+    facet_var: "Sample"
+    threshold: 0.5
+    fig_width: 12
+    fig_height: 8
+    dpi: 300
+### 4.0 Alpha Diversity: Community Trait Analysis
+Alpha_Diversity:
+  # Pillar Selection
+  traits:
+    richness: ['observed', 'chao1']
+    dominance: ['absolute', 'dbp']
+    evenness: ['pielou']
+    information: ['shannon']
+  
+  # Plotting Configuration
+  plotting:
+    x_axis: "SC_Number"
+    color_by: "SC_Number"
+    grid_cols: 2
+    fig_width: 12
+    fig_height: 8
+    dpi: 300
+    # Use 'all' to plot everything, or a specific list like ['observed', 'shannon']
+    selected_metrics: "all"
+### 5.0 Beta Diversity: Community Trait Analysis
+Beta_Diversity:
+  # Global Plotting Settings
+  color_var: "Groundwater_level"
+  shape_var: "SC_Number"
+  group_clustering: "Groundwater_level"
+  fig_width: 12
+  fig_height: 8
+
+  # Section 5.1: Basic Ordination
+  basic:
+    metric: "wunifrac" # Options: aitchison, bray, jaccard, unifrac, wunifrac
+    clr_variant: "BMR"
+
+  # Section 5.2 & 5.3: Advanced (Vectors/Environmental Fit)
+  advanced:
+    env_vars: ["pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.", "total.benzene.oxidation.capacity..mg.kg."]
+    top_asv_n: 5
+    target_tax_level: "order"
+    
+    # Scaling for PCA
+    pca_arrow_taxa: 5
+    pca_arrow_env: 2
+    
+    # Scaling for PCoA
+    pcoa_arrow_taxa: 0.2
+    pcoa_arrow_env: 0.1
+### 6.0 LinDA
+Differential_Abundance:
+  target_level: "family"
+  
+  # Model Configuration
+  model:
+    main_var: "Groundwater"
+    ref_group: "Below_GW"
+    # Note: Use double quotes for the formula to handle special characters
+    formula: "~ Groundwater * SUM.PAHs..EPA. + (1 | SC_Number)"
+  
+  # LinDA Algorithmic Parameters
+  params:
+    prev_filter: 0.0050
+    is.winsor: "TRUE"
+    outlier_pct: 0.03
+    zero_handling: "imputation"
+    pseudo_cnt: 0.5
+    alpha: 0.05
+    p_adj_method: "BH"
+
+  # Visualization
+  plotting:
+    var_to_plot: "SUM.PAHs..EPA." # Must match one of names(linda_res$output)
+    fig_width: 12
+    fig_height: 8
