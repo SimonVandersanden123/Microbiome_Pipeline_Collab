@@ -13,8 +13,9 @@ project_metadata:
   author: "Simon"
 
 paths:
-  phyloseq_rds: "data/ps_taxid.final_with_tree_Griftpark_Consortia.rds"
-  metadata_txt: "data/META_Griftpark_Soilcore_Measurements.txt"
+  phyloseq_rds: "data/ps_taxid_final_with_tree_Griftpark_Consortia.rds"
+  metadata_txt: "data/METADATA_Enrichtments_Final_cleaned_renamed.txt"
+  phyloseq_rds_for_Snowflake: "data/ps_work_filtered_for_snowflake_tss.rds"
 
 scripts:
   #Preprocessing
@@ -43,9 +44,13 @@ analysis_params:
   metadata_sep: "\t"
   metadata_dec: ","
 
+######["Blank", "MockB", "nosample1", "nosample2", "nosample3", "nosample4","SV15","SV16", "SV17","SV18", "SV19","SV20", "SV21", "SV22", "SV23", "SV24",
+## "SV25", "SV26", "SV27", "SV28", "SV29", "SV30", "SV31", "SV32", "SC2AA1", "SC2AA2", "SC2AI1", "SC2AI2", "SC2BA1", "SC2BA2", "SC2BI1", "SC2BI2", "SC4AA1", "SC4AA2",
+## "SC4AI1", "SC4AI2", "SC4BA1", "SC4BA2", "SC4BI1", "SC4BI2", "SC6AA1", "SC6AA2", "SC6AI1", "SC6AI2", "SC6BA1", "SC6BA2", "SC6BI1", "SC6BI2"]
 filtering:  # <--- This is the 'Parent' box for Section 2
-  samples_to_remove: ["Blank", "MockB", "nosample1", "nosample2", "nosample3", "nosample4", "SV188", "SV189"]
-  prev_filter_threshold: 2
+  samples_to_remove: ["Blank", "MockB", "nosample1", "nosample2", "nosample3", "nosample4","SV15","SV16", "SV17","SV18", "SV19","SV20", "SV21", "SV22", "SV23", "SV24",
+ "SV25", "SV26", "SV27", "SV28", "SV29", "SV30", "SV31", "SV32"]
+  prev_filter_threshold: 3
   abund_filter_threshold: 5
   apply_prevalence: true
   apply_abundance: true
@@ -55,9 +60,10 @@ variance_filtering:
   apply_filter: true 
 
 subsetting:
-  use_subset: false
-  column_name: "SC_Number"
-  target_value: "SC6"
+  use_subset: true #true/ false
+  column_name: "Target_Samples"  ## Select the column name "Target_Samples"
+  target_value: ["X"] # "Enrichment_start" or a list: ["group1","group2"] ["X"]["Enrichment_start","Enrichment_I"]
+
 
 ### 3.0 Community barcharts parameters
 Barplot_specific:
@@ -65,8 +71,8 @@ Barplot_specific:
   
   # Section 3.1: Global Community Barplots
   global_barplots:
-    high_level: "phylum"
-    low_level: "order"
+    high_level: "order"
+    low_level: "genus"
     facet_var: "Sample"
     threshold: 1.0 #
     fig_width: 12
@@ -106,9 +112,9 @@ Alpha_Diversity:
 ### 5.0 Beta Diversity: Community Trait Analysis
 Beta_Diversity:
   # Global Plotting Settings
-  color_var: "Groundwater_level"
-  shape_var: "SC_Number"
-  group_clustering: "Groundwater_level"
+  color_var: "Group4"
+  shape_var: "Group3"
+  group_clustering: "Group4"
   fig_width: 12
   fig_height: 8
 
@@ -119,7 +125,7 @@ Beta_Diversity:
 
   # Section 5.2 & 5.3: Advanced (Vectors/Environmental Fit)
   advanced:
-    env_vars: ["pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.", "total.benzene.oxidation.capacity..mg.kg."]
+    env_vars: #["pH", "Av_Iron.J.kg.", "Conductivity", "SUM.PAHs..EPA.", "total.benzene.oxidation.capacity..mg.kg."]
     top_asv_n: 5
     target_tax_level: "order"
     

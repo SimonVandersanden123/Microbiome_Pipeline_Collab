@@ -1,0 +1,277 @@
+---
+title: "Snowflake Demo"
+output: html_document
+---
+
+This document provides an example on how to use snowflake.
+
+### Installation
+```{r, DEBUGGEN VAN VAAK VOORKOMENDE ERROR: Error in x[[jj]][iseq] <- vjj : replacement has length zero}
+
+
+```
+
+```{r Install Phyloseq, eval=FALSE}
+#if (!require("BiocManager", quietly = TRUE))
+#  install.packages("BiocManager")
+#BiocManager::install(version = "3.18")
+#BiocManager::install("phyloseq")
+
+```
+
+```{r Install Crosstalk, eval=FALSE}
+if (!require("crosstalk", quietly = TRUE))
+  devtools::install_github("rstudio/crosstalk")
+```
+
+```{r load phyloseq}
+library(phyloseq)
+library(crosstalk)
+library(shiny)
+library(dplyr)
+```
+
+```{r Load Snowflake, message=FALSE, warning=FALSE}
+devtools::load_all()
+
+
+```
+
+```{r, load mcg data manually from previously created mcgs}
+mcg_SC2 <- readRDS("MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_SC2_Filt_5.rds")
+mcg_SC4<- readRDS("MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_SC4_Filt_5.rds")
+mcg_SC5<- readRDS("MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_SC5_Filt_5.rds")
+mcg_Soil <- readRDS("MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_Soil_Filt_0°01_.rds")
+mcg_Noa <- readRDS("MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_Soil_Filt_0°01_.rds")
+```
+### Import Data
+
+We load the ASV table and ASV abundance table, reprocessed from 16S rRNA sequences using [Dada2](https://benjjneb.github.io/dada2/).
+
+```{r Import Data}
+###import ASV table, taxonomy table and phylogenetic tree
+#setwd("C:/Amplicon_sequencing_analysis/SIMON_SNOWFLAKE_WORKING_DIRECTORY/Adapted_By_Simon/Working_Directory_FINAL")
+asv_table <- readRDS("Input_Data/seqtab.nochim_OTU.rds")
+#Change some names of the original samples for a good format
+# Create the original data frame
+# Check if the row names have been assigned correctly
+# Select rows x to x from asv_table
+###Change the rownames so they are properly set like in the metadata table
+#sample_names_metadata <- meta_data$Sample_NAME
+#sample_names_asv_table <-rownames(asv_table)
+#rownames(asv_table)<- sample_names_metadata
+#View(sample_names_asv_table)
+#print(meta_data$Sample_NAME)
+#saveRDS(asv_table, "Input_Data/seqtab.nochim_OTU.rds" )
+###Lees de taxa table, zorg dat deze gegenereerd is uit de bovenstaande ASV tabel.
+taxa_table <- readRDS("Input_Data/taxa_si_sp.rds")
+###Lees de metadata tabel, header = True omdat je de kolomnamen wil zetten omdat deze zo in de metadata staan, ook row.names =1, omdat je sample names als rownames moeten worden ingesteld omdat anders phyloseq er geen goed object van kan maken.
+meta_data <- read.table("Input_Data/META_ALL_cleaned_renamed.txt", header = T, row.names = 1)
+#laad de phylogenetische boom in, deze kan je best genereren met eensubset van data waarin je geïntresseerd bent!!! omdat dit heel lang duurt als je veel verschillende sequenties hebt. 
+phylo_tree <- readRDS("Input_Data/alignment.rds")
+```
+
+```{r,subsampling data}
+# Here you can select some subsamples, make sure the phylo three you upload takes into account this selection, taxonomy is fine
+rownames_asv_table<-rownames(asv_table)
+print(rownames_asv_table)
+asv_table_sub <- asv_table[c('EC_SC2_a_I_T2','EC_SC2_a_I_T5','EC_SC4_b_I_T2','EC_SC4_b_I_T5'), ]
+rownames(asv_table_sub) #this prints the rownames below to check sample selection
+### load in the desired taxonomic tree, if a sub sampling of the asv_table is done
+Phylo_tree_sub <- readRDS("Griftpark_Enrichments_OTU_DATA/alignment.rds")
+
+```
+
+### Create Phyloseq object
+
+```{r, Create Phyloseq Object}
+# Phyloseq object with all possible data types: tree, metadata, asv and taxa
+#ps <- phyloseq(otu_table(asv_table, taxa_are_rows=F),
+#               tax_table(taxa),phy_tree(Phylo_tree$tree), sample_data(meta_data))
+#help(phyloseq)
+
+ps <- phyloseq(otu_table(asv_table, taxa_are_rows=F),
+               tax_table(taxa_table),sample_data(meta_data))
+
+help(phyloseq)
+#without phylogenetic tree for TEST
+ps_sub <- phyloseq(otu_table(asv_table_sub, taxa_are_rows=F),
+               tax_table(taxa_table), sample_data(meta_data))
+###you can visualise the trees if applicatble
+#plot_tree(ps@phy_tree)
+#plot_tree(ps_sub@phy_tree)
+```
+
+In case you want to filter taxa...
+
+```{r, filtering the reads how you want it}
+#Filter it like the example
+ps_filtered <- filter_taxa(ps_sub,function(x) mean(x) > 50, TRUE)
+####transform to relative abundance
+ps_rel_abundance = transform_sample_counts(ps_sub, function(x)x/sum(x))
+#### Filter the object that is transformed to relative abundance so it only keeps the OTU's with a mean greated than 0.00001(10^-5) are kept. 
+#PS_rel_ab_filtered <- filter_taxa(ps_rel_abundance, function(x)mean(x)>1e-4, TRUE)
+#convert them back into absolute counts:
+#total_counts <- sample_sums(ps_sub)
+#ps_counts_back <- transform_sample_counts(PS_rel_ab_filtered, function(x) x * total_counts)
+
+#other subsetting methods: je neemt een subset van de dataset die deel zijn van het genus Pseudomonas
+ps_subsetted_Pseudomonas = subset_taxa(ps, Genus=="Pseudomonas")
+###Some space to modify the code
+ps_subsetted_Proteobacteria = subset_taxa(ps, Phylum=="Proteobacteria")
+ps_subsetted_Proteobacteria <- 
+#Dit zal de samples removen als er minder dan X reads zijn
+ps_subsetted_Pseudomonas_filtered = prune_samples(sample_sums(ps_subsetted_Pseudomonas)>=1000, ps_subsetted_Pseudomonas)
+GP.chl = prune_samples(sample_sums(GP.chl)>=20, GP.chl)
+#Filter
+
+```
+
+
+```{r, Different ways to merg the OTUs in you phyloseq object }
+###Merge the taxa, into new OTUs, here you can select which OTUs are merged togheter
+ps_SC2_merged_taxa <- merge_taxa(ps_filtered, taxa_names())
+#Merging all the phyloseq objects togheter at a specific taxonomic level:
+  # some more info on this command: https://www.rdocumentation.org/packages/phyloseq/versions/1.16.2/topics/tax_glom 
+####Recommended to do this with the otu table and then make the ps object:
+False_ps_tax_glom_Genus <- tax_glom(ps_filtered, taxrank=rank_names(ps_sub)[7], NArm=TRUE, bad_empty=c(NA, "", " ", "\t"))
+#Save the OTU table to later combine again with the initial taxonomy table inorder to make the object readable, (otherwise it will just keep the first X entries as the number of targets you have, and the taxonomy wont make sense with the OTU's you keep)
+otu_table_glom_Genus <- False_ps_tax_glom_Genus@otu_table
+#make a new phyloseq object 
+ps_NOA_merged_taxa_Tax_Glom <- phyloseq(otu_table(otu_table_glom_Genus, taxa_are_rows=F),
+               tax_table(taxa_table))
+
+# Create a smaller subset of your data
+#ps_subset <- subset_samples(ps_SC2_merged_taxa_Tax_Glom, sample_names(ps_SC2_merged_taxa_Tax_Glom) %in% c("SC2A", "SC2AA1", "SC2AA2"))
+
+# Run the function on the subset
+mcg_ps_subsetted_Noa<- build_mc_graph(ps_object = ps_filtered)
+mcg_Noa <- mcg_ps_subsetted_Noa
+saveRDS(mcg_Noa, file = "MCG_SAVES/mcg_Noa_relative_abundance_filtered_asv_50_ASV.rds")
+
+##  There will be a missmatch between the taxonomy file and otu file in the new phyloseq
+# Check if the row names in both the OTU table and taxonomy table match
+identical(rownames(ps_NOA_merged_taxa_Tax_Glom@otu_table), rownames(ps_NOA_merged_taxa_Tax_Glom@tax_table))
+# Subset the taxonomy table to match the OTU table
+# Subset the taxonomy table to match the OTU table by row names
+ps_NOA_merged_taxa_Tax_Glom@tax_table <- ps_NOA_merged_taxa_Tax_Glom@tax_table[rownames(ps_NOA_merged_taxa_Tax_Glom@otu_table), ]
+
+```
+
+```{r,Merge tree based on phylogeny}
+
+### Merge the taxa togheter into new OTU's, here you can select which taxa stay together based on the phylogeny tree
+  # some more info on this command: https://www.rdocumentation.org/packages/phyloseq/versions/1.16.2/topics/tip_glom
+tip_glom_ps1 <- tip_glom(ps, h = 0.2, hcfun = agnes)
+
+tip_glom_ps2 <-
+```
+
+### Compose Microbiome Composition Graph
+
+The user provides a phyloseq object and chooses which beta diversity distance metric to be used for downstream analysis (default 'bray'). See phyloseq distance() documentation for a list of metrics to be used. In addition, the user can specify whether he wants the rows and columns of the abundance table to be reordered to reveal possible higher order patterns in the data.
+```{r MC Graph}
+# Default
+
+mcg_Test_3_02 <- build_mc_graph(ps_object = ps_sub, seriation_method = NULL)
+
+help(build_mc_graph)
+mcg_SIMONS_OTU_1212 <- build_mc_graph(ps_object = ps_TEST, seriation_method = NULL)
+
+mcg <- mcg_TEST
+saveRDS(mcg_SC2, file = "MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_SC2_Filt_5.rds")
+
+saveRDS(mcg_SC4, file = "MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_SC4_Filt_5.rds")
+
+saveRDS(mcg_SC5, file = "MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_SC5_Filt_5.rds")
+saveRDS(fit, file = "Griftpark_Enrichments_OTU_DATA/fit.rds")
+saveRDS(mcg_Soil_DNA_5Filtering, file = "MCG_SAVES/29_11_Simon_mcg_ALL_Samples_Filt_mcg_Soil_Filt_0°01_.rds")
+
+mcg <- readRDS ("27_11_Simon_mcg_ALL_Samples.rds")
+# Specifying a distance metric to be used for beta diversity calculations.
+# mcg <- build_mc_graph(ps_object = ps, beta_dist = "jaccard")
+
+# Adding matrix seriation (optimal leaf ordering)
+# mcg <- build_mc_graph(ps_object = ps, beta_dist = "bray", seriation_method = "OLO")
+```
+
+### Adjacency matrix
+
+The Microbiome Compisition Graph can be displayed using an adjacency matrix. The adjacency matrix's appearance can be changed by the function parameters. See documentation for a more thorough description.
+
+```{r Adjacency-Matrix parameters, eval=FALSE}
+# Default
+adjacencyMatrix(graph_object = sofie_mcg_Test)
+help('seriation')
+# Color cells by relative abundance
+adjacencyMatrix(graph_object = mcg_Noa, cellColor = "relative" )
+
+# Color sample labels by group#mcg_SC2 Color sample labels by group
+adjacencyMatrix(graph_object = mcg_Soil, cellColor = "relative", source_color = "index")
+
+# Disable horizontal brushing
+adjacencyMatrix(graph_object = mcg_Soil_DNA, cellColor = "relative", columnBrush = FALSE)
+```
+```{r Adjacency-Matrix example, cache=FALSE}
+adjacencyMatrix(graph_object = mcg, cellColor = "relative")
+```
+
+
+### Plot node-link diagram
+
+The Microbiome Composition Graph can be displayed using a node-link diagram. The node-link diagram is driven by a force-directed layout algorithm and its appearance can be changed by the function parameters. See documentation for a more thorough description.
+```{r node-link parameters, eval=FALSE}
+# Default
+forceGraph(graph_object = mcg_SC2)
+# Color source and target nodes
+forceGraph(graph_object = mcg, source_color = "alphaShannon", target_color = "genus", Target_Genus = 'Pseudomonas')
+forceGraph(graph_object = mcg, source_color = "alphaShannon", target_color = "abundance")
+# Set the node attributes to be printed while hovering on a node
+forceGraph(graph_object = mcg, nodeTitle = c("id", "group"))
+# Map relative abundance to edge color
+forceGraph(graph_object = mcg_SC2, linkStroke = list("relative", "linear", c(0,0.1), c("grey", "blue")))
+# Set grouping variable
+forceGraph(graph_object = mcg_SC2, groupingVariable = "group")
+# Disable highlighting of ASV abundance in samples
+forceGraph(graph_object = mcg, highlightAbundance = FALSE)
+```
+
+```{r Node-Link example, cache=FALSE}
+forceGraph(graph_object = mcg_Noa, 
+           target_color = "abundance", 
+           nodeTitle = c("id", "Genus", "abundance"),
+           linkStroke = "#808080",
+           linkStrokeOpacity = list("relative", "linear", c(0,0.1), c(0.3,.7))
+)
+
+# Create a custom column in your `graph_object` for targeted taxa
+mcg_all_data_filt$nodes$highlight <- ifelse(mcg_all_data_filt$nodes$genus == "pseudomonas", "highlight", "other")
+
+# Then, use this new column in the `target_color` parameter:
+forceGraph(graph_object = mcg_all_data_filt, 
+           source_color = "alphaShannon", 
+           target_color = "highlight",  # Custom color for 'highlight' taxa
+           nodeTitle = c("id", "genus", "abundance"),
+           linkStroke = "#808080",
+           linkStrokeOpacity = list("relative", "linear", c(0, 0.1), c(0.3, .7))
+)
+
+
+
+
+```
+
+
+### Combining node-link diagram and adjacency matrix
+
+When building the `mcg`, a crosstalk object is automatically created on data. Hence plots can be used to interact with each other. One can select samples by clicking their name or zoom in on a certain set of observed taxa using two-dimensional brushing on the adjacency matrix and get an updated view of the node-link diagram. Note, check crosstalk documentation for rearranging the view.
+
+```{r Combined View, echo=FALSE, fig.show='ask', cache=FALSE}
+library(crosstalk)
+bscols(
+    adjacencyMatrix(graph_object = mcg, cellColor = "relative"),
+    forceGraph(graph_object = mcg, source_color = "beta", target_color = "abundance"),
+    widths = c(12,12)
+)
+```
+
