@@ -13,7 +13,7 @@ project_metadata:
   author: "Simon"
 
 paths:
-  phyloseq_rds: "data/ps_taxid.final_with_tree_Griftpark_Consortia.rds"
+  phyloseq_rds: "data/ps_IdTax_noncontam_NoMitChlo_Tree.rds"
   metadata_txt: "data/META_Griftpark_Soilcore_Measurements.txt"
 
 scripts:
