@@ -19,6 +19,6 @@ alpha_boxplot <- ggplot(plot_data, aes(x = .data[[plot_x_axis]], y = Value, fill
   theme_bw() +
   labs(title = "Microbial Community Trait Analysis",
        x = plot_x_axis, y = "Index Value", fill = plot_color_by) +
-  theme(strip.text = element_text(face = "bold"), legend.position = "bottom")
+  theme(strip.text = element_text(face = "bold"), legend.position = "bottom", axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
 
 message("Alpha plot generated.")

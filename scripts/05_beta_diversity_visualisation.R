@@ -1,22 +1,28 @@
 # scripts/05_beta_diversity_visualisation.R
+
 # 1. Base Plot Creation
 p_beta <- plot_ordination(ps_beta_input, ord_beta, color = color_var, shape = shape_var) + 
-  geom_point(size = 4, alpha = 0.7) + 
-  
-  # 2. Add Grouping Ellipses
-  # Note: This uses the group_clustering variable defined in your Rmd
-  stat_ellipse(aes(group = .data[[group_clustering]]), linetype = 2, alpha = 0.5) + 
-  
-  # 3. ADDED: Sample Labeling Logic
-  # We use ggrepel to prevent labels from overlapping the points
-  geom_text_repel(aes(label = sample_names(ps_beta_input)), 
-                  size = 3, 
-                  max.overlaps = 15, # Adjust this if too many labels disappear
-                  box.padding = 0.5,
-                  point.padding = 0.3,
-                  segment.color = 'grey50') +
+  geom_point(size = 4, alpha = 0.7)
 
-  # 4. Styling and Labels
+# 2. CONDITIONAL: Add Grouping Ellipses
+if (show_ellipses) {
+  p_beta <- p_beta + 
+    stat_ellipse(aes(group = .data[[group_clustering]]), linetype = 2, alpha = 0.5)
+}
+
+# 3. CONDITIONAL: Sample Labeling Logic
+if (show_labels) {
+  p_beta <- p_beta + 
+    geom_text_repel(aes(label = sample_names(ps_beta_input)), 
+                    size = 3, 
+                    max.overlaps = 15, 
+                    box.padding = 0.5,
+                    point.padding = 0.3,
+                    segment.color = 'grey50')
+}
+
+# 4. Styling and Labels (Appended to whatever layers were built above)
+p_beta <- p_beta + 
   theme_bw() +
   labs(
     title = paste(toupper(beta_metric), "Ordination"),
@@ -33,13 +39,12 @@ p_beta <- plot_ordination(ps_beta_input, ord_beta, color = color_var, shape = sh
 
 # 5. Save Output
 if(!dir.exists("results")) dir.create("results")
-ggsave(paste0("results/beta_", beta_metric, "_labeled.png"), p_beta, width = 12, height = 8, dpi = 300)
 
-message("Beta diversity plot with labels generated.")
-ggsave(paste0("results/beta_", beta_metric, ".png"), p_beta, width = 12, height = 8, dpi = 300)
+# Cleaned up file naming logic to match whether it is labeled or not
+suffix <- if (show_labels) "_labeled" else ""
+output_path <- paste0("results/beta_", beta_metric, suffix, ".png")
 
-message("Beta diversity plot generated.")
-
-
+ggsave(output_path, p_beta, width = 12, height = 8, dpi = 300)
+message("Beta diversity plot generated: ", output_path)
 
 

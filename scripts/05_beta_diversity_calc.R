@@ -28,12 +28,73 @@ if (grepl("wunifrac", beta_metric, ignore.case = TRUE) & is.null(phy_tree(ps_bet
 message(paste("Calculating:", msg_text))
 ord_beta <- ordinate(ps_beta_input, method = ord_method, distance = dist_method)
 
-# --- 4. Statistical Testing (PERMANOVA) ---
+# --- 4. Statistical Testing (PERMANOVA with Streamlined Factor Processing) ---
+# ----------------------------------------------------------------------------
 dist_matrix <- phyloseq::distance(ps_beta_input, method = dist_method)
-metadata <- as(sample_data(ps_beta_input), "data.frame")
+metadata    <- as(sample_data(ps_beta_input), "data.frame")
 
-formula_beta <- reformulate(color_var, response = "dist_matrix")
-permanova_res <- adonis2(formula_beta, data = metadata)
+# Combine all targeted variables for a complete case check
+all_target_vars <- c(numeric_env_variables, categ_env_variables)
+
+# 1. Create a temporary matrix strictly to find complete cases (no NAs)
+# We force numeric columns here so that text values like "missing" turn to NA and get dropped
+temp_check <- metadata %>%
+  dplyr::select(dplyr::all_of(all_target_vars)) %>%
+  mutate(across(dplyr::all_of(numeric_env_variables), function(x) as.numeric(as.character(x))))
+
+complete_indices    <- which(complete.cases(temp_check))
+complete_sample_ids <- rownames(metadata)[complete_indices]
+
+# 2. Subset BOTH your final metadata and distance matrix to match perfectly
+metadata_complete   <- metadata[complete_sample_ids, , drop = FALSE]
+dist_matrix_complete <- as.dist(as.matrix(dist_matrix)[complete_sample_ids, complete_sample_ids])
+
+# 3. Apply clean data types to your final metadata object (THE ONLY LOOP YOU NEED)
+metadata_complete[numeric_env_variables] <- lapply(metadata_complete[numeric_env_variables], function(x) as.numeric(as.character(x)))
+
+# =====================================================================
+# AUTOMATED FACTOR CONVERSION LAYER (Run exactly once)
+# =====================================================================
+for (cat_var in categ_env_variables) {
+  if (cat_var %in% colnames(metadata_complete)) {
+    if (cat_var == "Timepoint") {
+      metadata_complete[[cat_var]] <- factor(
+        metadata_complete[[cat_var]], 
+        levels = c("T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"), 
+        ordered = TRUE
+      )
+    } else {
+      metadata_complete[[cat_var]] <- factor(metadata_complete[[cat_var]])
+    }
+  }
+}
+# =====================================================================
+
+# 4. Formulate formula dynamically and run PERMANOVA
+formula_beta       <- reformulate(all_target_vars, response = "dist_matrix_complete")
+
+message("Running marginal PERMANOVA using streamlined numeric and factor matrices...")
+permanova_marginal <- adonis2(formula_beta, data = metadata_complete, by = "margin", permutations = 999)
+# print(permanova_marginal) # just give the permanova results, in the order in which the variables were put in
+# Print the Permanova results ordered from highest R2 value
+# 1. Convert the PERMANOVA object to a clean, sortable dataframe
+permanova_sorted <- as.data.frame(permanova_marginal) %>%
+  tibble::rownames_to_column("Variable") %>%
+  # 2. Separate your actual variables from the Residual and Total rows
+  filter(!Variable %in% c("Residual", "Total")) %>%
+  # 3. Sort by R2 in descending order (highest on top)
+  arrange(desc(R2))
+
+# 4. Bind the Residual and Total rows back to the bottom so the math remains intact
+structural_rows <- as.data.frame(permanova_marginal) %>%
+  tibble::rownames_to_column("Variable") %>%
+  filter(Variable %in% c("Residual", "Total"))
+
+permanova_final_table <- bind_rows(permanova_sorted, structural_rows)
+
+# 5. Print your beautifully ordered table!
+print(permanova_final_table, row.names = FALSE)
+
 
 # Extract p-value for the plot title later
-beta_p_val <- permanova_res$`Pr(>F)`[1]
+beta_p_val <- permanova_marginal$`Pr(>F)`[1]
