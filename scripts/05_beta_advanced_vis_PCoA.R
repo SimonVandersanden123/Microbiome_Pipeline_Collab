@@ -41,9 +41,11 @@ sig_arrows <- ef_arrows[ef_wunifrac$vectors$pvals < 0.05, ]
 # Manual scaling factors to fix the "too big" arrows
 #arrow_reduction_env  <- 0.1, this can now be specified in the rmd file  # Adjust this to shrink black arrows
 # Fix Environmental Arrow Scaling as well
-sig_arrows <- sig_arrows %>%
-  mutate(Dim1 = Dim1 * arrow_reduction_env,
-         Dim2 = Dim2 * arrow_reduction_env)
+if (nrow(sig_arrows) > 0) {
+  scale_factor_env <- (max_point_limit / max(abs(c(sig_arrows$Dim1, sig_arrows$Dim2)))) * 0.01
+  sig_arrows$Dim1 <- sig_arrows$Dim1 * scale_factor_env
+  sig_arrows$Dim2 <- sig_arrows$Dim2 * scale_factor_env
+}
 # 3. Taxa Correlation (Top ASVs)
 # -------------------------------------------
 # Unlike PCA (Aitchison), PCoA is based on a distance matrix (e.g., UniFrac) and 
@@ -67,51 +69,78 @@ taxa_scores$Taxon_Label <- tax_table_df[[target_level]]
 # 2. Clean Labels: If Genus is NA, use the ASV rowname instead
 taxa_scores$Taxon_Label[is.na(taxa_scores$Taxon_Label)] <- rownames(taxa_scores)[is.na(taxa_scores$Taxon_Label)]
 # 3. Scale and Pick Top N
-# Note: Added 0.3 scaling here to stop them from being "too big"
-arrow_scale <- vegan::ordiArrowMul(enfit_taxa) * arrow_reduction_env
 
 top_taxa_arrows <- taxa_scores %>%
   arrange(desc(r2)) %>%
-  head(top_asv_n) %>%
-  mutate(Dim1 = Axis.1 * arrow_scale,
-         Dim2 = Axis.2 * arrow_scale)
+  head(top_asv_n)
 
+# Auto-scale taxa arrows relative to the data spread
+if (nrow(top_taxa_arrows) > 0) {
+  scale_factor_taxa <- (max_point_limit / max(abs(c(top_taxa_arrows$Axis.1, top_taxa_arrows$Axis.2)))) * 0.65
+  top_taxa_arrows$Dim1 <- top_taxa_arrows$Axis.1 * scale_factor_taxa
+  top_taxa_arrows$Dim2 <- top_taxa_arrows$Axis.2 * scale_factor_taxa
+}
 # 4. Final Plot Construction
 # -------------------------------------------
 p_beta_PCoA <- ggplot(ordination_df, aes(x = Axis.1, y = Axis.2, 
                                          color = .data[[color_var]], 
                                          fill = .data[[color_var]], 
                                          shape = .data[[shape_var]])) +  
-  # Grouping Ellipses
-  stat_ellipse(aes(group = .data[[group_clustering]]), geom = "polygon", alpha = 0.2, level = 0.95) + 
-  
-  # Environmental Arrows (Only Significant)
-  geom_segment(data = sig_arrows, aes(x = 0, y = 0, xend = Dim1, yend = Dim2),
-               arrow = arrow(length = unit(0.2, "cm")), color = "black", inherit.aes = FALSE) +
-  geom_text_repel(data = sig_arrows, aes(x = Dim1, y = Dim2, label = Variable),
-                  color = "black", size = 4, fontface = "bold", inherit.aes = FALSE) +
-  
-  # Taxa Arrows (Top ASVs)
-  geom_segment(data = top_taxa_arrows, aes(x = 0, y = 0, xend = Dim1, yend = Dim2),
-               arrow = arrow(length = unit(0.2, "cm")), color = "blue", alpha = 0.4, inherit.aes = FALSE) +
-  geom_text_repel(data = top_taxa_arrows, aes(x = Dim1, y = Dim2, label = Taxon_Label),
-                  color = "blue", size = 3, fontface = "italic", inherit.aes = FALSE,max.overlaps = Inf,    # Forces all labels to show
-                  box.padding = 0.5,     # Gives labels more room to move
-                  point.padding = 0.2) + # Distance from the arrow tip 
-  
-  # Samples
-  geom_point(size = 4, alpha = 0.8) + 
-  geom_text_repel(aes(label = SampleID), size = 3, max.overlaps = 15, show.legend = FALSE) +  
-  
-  theme_minimal() +
-  labs(x = paste0("PCoA 1 (", round(ord_beta$values$Relative_eig[1] * 100, 2), "%)"),
-       y = paste0("PCoA 2 (", round(ord_beta$values$Relative_eig[2] * 100, 2), "%)"),
-       title = paste("PCoA Analysis (", beta_metric, "Distance)"),
-       subtitle = "Black = Sig. Env Factors | Blue = Top Contributing Taxa") +
-  theme(legend.position = "right", text = element_text(size = 12), aspect.ratio = 1)
+  # Samples Points
+  geom_point(size = 4, alpha = 0.8)
+
+# CONDITIONAL: Add Grouping Ellipses
+if (show_ellipses) {
+  p_beta_PCoA <- p_beta_PCoA + 
+    stat_ellipse(aes(group = .data[[group_clustering]]), geom = "polygon", alpha = 0.1, level = 0.95, linewidth = 0.2)
+}
+
+# Environmental Arrows (Only Significant)
+if (nrow(sig_arrows) > 0) {
+  p_beta_PCoA <- p_beta_PCoA +
+    geom_segment(data = sig_arrows, aes(x = 0, y = 0, xend = Dim1, yend = Dim2),
+                 arrow = arrow(length = unit(0.2, "cm")), color = "black", inherit.aes = FALSE, linewidth = 0.6) +
+    geom_text_repel(data = sig_arrows, aes(x = Dim1, y = Dim2, label = Variable),
+                    color = "black", size = 4, fontface = "bold", inherit.aes = FALSE, box.padding = 0.3)
+}
+
+# Taxa Arrows (Top ASVs)
+if (nrow(top_taxa_arrows) > 0) {
+  p_beta_PCoA <- p_beta_PCoA +
+    geom_segment(data = top_taxa_arrows, aes(x = 0, y = 0, xend = Dim1, yend = Dim2),
+                 arrow = arrow(length = unit(0.2, "cm")), color = "blue", alpha = 0.4, inherit.aes = FALSE) +
+    geom_text_repel(data = top_taxa_arrows, aes(x = Dim1, y = Dim2, label = Taxon_Label),
+                    color = "blue", size = 3.5, fontface = "italic", inherit.aes = FALSE,
+                    max.overlaps = 20, box.padding = 0.5, point.padding = 0.2)
+}
+
+# CONDITIONAL: Sample Labeling Logic
+if (show_labels) {
+  p_beta_PCoA <- p_beta_PCoA + 
+    geom_text_repel(aes(label = .data[[labels]]), size = 3, max.overlaps = 15, show.legend = FALSE)
+}
+
+# Styling, Axes Variances, and General Plot Metadata
+p_beta_PCoA <- p_beta_PCoA + 
+  theme_bw() +
+  scale_shape_manual(values = c(7, 9, 15, 0, 16, 1, 17, 2, 18, 5, 19, 6)) + # Safe shapes for over 6 categories
+  labs(
+    x = paste0("PCoA 1 (", round(ord_beta$values$Relative_eig[1] * 100, 1), "%)"),
+    y = paste0("PCoA 2 (", round(ord_beta$values$Relative_eig[2] * 100, 1), "%)"),
+    title = paste("PCoA Analysis (", toupper(beta_metric), "Distance)"),
+    subtitle = paste("PERMANOVA p-value:", format.pval(beta_p_val, digits = 3),
+    if(show_labels) paste0("| Points labeled with:", labels) else ""),
+    caption = "Black = Sig. Env Factors | Blue = Top Contributing Taxa"
+  ) +
+  theme(
+    aspect.ratio = 1,
+    legend.position = "right", 
+    text = element_text(size = 12),
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5)
+  )
 
 # 5. Save Output
 if(!dir.exists("results")) dir.create("results")
 ggsave(paste0("results/PCoA_upgraded_", beta_metric, ".png"), plot = p_beta_PCoA, width = 12, height = 8, dpi = 300)
-
 message("PCoA Upgraded plot successfully generated using SV base logic.")

@@ -6,7 +6,7 @@ output:
   html_document: default
   pdf_document: default
 params:
-  config_file: "configs/Config_Griftpark_Soilcore.yaml"
+  config_file: "configs/Config_Griftpark_Wetland_All_Wetland_Samples_New_Metadata.yaml"
 ---
 
 ```{r setup, include=FALSE}
@@ -14,7 +14,7 @@ params:
 library(yaml)
 # SAFETY NET: If params doesn't exist (manual run), manually point to the file
 if (!exists("params") || is.null(params$config_file)) {
-  config_path <- "configs/Config_Griftpark_Soilcore.yaml"
+  config_path <- "configs/Config_Griftpark_Wetland_All_Wetland_Samples_New_Metadata.yaml"
 } else {
   config_path <- params$config_file
 }
@@ -38,6 +38,7 @@ library(scales)
 library(paletteer)
 library(stringr)
 library(yaml)
+set.seed(99)
 ```
 
 ## 1:Loading in and inspecting the different parts of the phyloseq object
@@ -96,7 +97,7 @@ mibi_phylo_object <- prune_samples(
   mibi_phylo_object
 )
 # Run the rarefaction script using the path from config
-source(config$scripts$rarefaction)
+#source(config$scripts$rarefaction)
 ```
 ## 2.1:Data Pre-processing: Filtering out based on prevalence and abundance
 
@@ -104,6 +105,7 @@ Often prevalence or abundance filtering is done to remove uncertain features whi
 Here you can filter on prevalence and abundance, you can also select either prevalence or either abundance.
 
 ```{r}
+config <- yaml::read_yaml(config_path)
 # --- Filtering parameters: PULLED FROM CONFIG ---
 prev_filter_threshold  <- config$filtering$prev_filter_threshold
 abund_filter_threshold <- config$filtering$abund_filter_threshold
@@ -120,25 +122,11 @@ source(config$scripts$filtering)
 # Resulting object 'mibi_phylo_object_filt' is now ready
 ```
 
-## 2.1:Data Pre-processing: Filtering based on variance OPTIONAL, !!!This is not working yet!!!Also this should not be used for alpha or beta diversity, However it might be usefull before differential abundance analysis
-```{r}
-# --- Variance parameters: PULLED FROM CONFIG ---
-variance_cutoff <- config$variance_filtering$cutoff
-variance_filter_switch <- as.numeric(config$variance_filtering$apply_filter)
-
-# Run the background script
-# Note: This script uses mibi_phylo_object_filt
-source(config$scripts$variance)
-
-# The resulting object 'mibi_phylo_object_filt' is now updated
-#This script starts with mibi_phylo_object_filt and updates it with this filtering 
-# The resulting object 'mibi_phylo_object_filt' is now updated
-```
-
 ## 2.1:Data Pre-processing: Sample removal or subset selection
 If you have a large dataset or are interested in specific samples, here you can select which samples or groups of samples you want to take a closer look at.
 ### The script knows whether to subset or keep the full dataset based on the config file
 ```{r}
+config <- yaml::read_yaml(config_path)
 if (config$subsetting$use_subset) {
   
   target_group <- config$subsetting$target_value
@@ -168,6 +156,8 @@ if (config$subsetting$use_subset) {
 # We use the 'subset' object, which is either the actual subset 
 # OR the full dataset (if no subsetting was applied in the previous chunk).
 ps_work <- mibi_phylo_object_subset
+#Change the sample names to logical names
+sample_names(ps_work) <- ps_work@sam_data$sample_names
 # --- Reporting: Final Object Overview ---
 # 1. Get the total counts
 n_samples <- nsamples(ps_work)
@@ -213,6 +203,12 @@ source(config$scripts$normalization)
 if(exists("mibi_tss")) {
   message("Normalization complete: mibi_tss, mibi_pseudo_clr, and mibi_bmr_clr are ready.")
 }
+#quickly save the generated objects for a quicker later analysis
+saveRDS(mibi_tss, file = "Objects_Generated_In_Pipeline/mibi_tss_All_Wetland_Samples.rds")
+saveRDS(mibi_pseudo_clr, file = "Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Wetland_Samples.rds")
+saveRDS(mibi_bmr_clr, file = "Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Wetland_Samples.rds")
+saveRDS(ps_work, file = "Objects_Generated_In_Pipeline/ps_work_All_Wetland_Samples.rds")
+
 ```
 
 ###The script generates three primary objects. Choosing the right one depends on your specific analysis:
@@ -223,9 +219,57 @@ if(exists("mibi_tss")) {
 
 -mibi_bmr_clr BMR-CLR (Bayesian) Advanced Stats: High-fidelity modeling and differential abundance.
 
+Specific for the wetland sample analysis, a chunk of code to make some adjustments to the objects
+```{r}
+# We replace the filename, the separator (\t), and the decimal (,) with config values
+mibi_meta_table_new <- read.table(
+  file = config$paths$metadata_txt, 
+  header = TRUE, 
+  sep = config$analysis_params$metadata_sep, 
+  row.names = 1, 
+  stringsAsFactors = FALSE, 
+  dec = config$analysis_params$metadata_dec
+)
+
+# Load in the previously saved and normalized objects
+mibi_tss <- readRDS("Objects_Generated_In_Pipeline/mibi_tss_All_Wetland_Samples.rds") 
+mibi_pseudo_clr <-readRDS("Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Wetland_Samples.rds") 
+mibi_bmr_clr <- readRDS("Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Wetland_Samples.rds") 
+ps_work <- readRDS("Objects_Generated_In_Pipeline/ps_work_All_Wetland_Samples.rds") 
+
+# Change the samples names, so they match with the metadata formatting
+sample_names(ps_work) <- ps_work@sam_data$Sample_ID
+sample_names(mibi_tss) <- mibi_tss@sam_data$Sample_ID
+sample_names(mibi_pseudo_clr) <- mibi_pseudo_clr@sam_data$Sample_ID
+sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$Sample_ID
+#load in the updated metadata table 
+sample_data(ps_work) <- mibi_meta_table_new
+sample_data(mibi_tss) <- mibi_meta_table_new
+sample_data(mibi_pseudo_clr) <- mibi_meta_table_new
+sample_data(mibi_bmr_clr) <- mibi_meta_table_new
+
+# Remane them again for interpretation:  Change the samples names, so they are based on the sample names:
+sample_names(ps_work) <- ps_work@sam_data$sample_names
+sample_names(mibi_tss) <- mibi_tss@sam_data$sample_names
+sample_names(mibi_pseudo_clr) <- mibi_pseudo_clr@sam_data$sample_names
+sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$sample_names
+
+
+### Make subsets in ps_work per Constructed wetland for specific analysis:
+barchart_target   <- "CW_2"
+barchart_target_col <- "CW_number"
+# Professional trick: use 'get' to find the column name dynamically from the string in YAML
+ps_work <- subset_samples(ps_work, get(barchart_target_col) == barchart_target)
+mibi_bmr_clr <- subset_samples(mibi_bmr_clr, get(barchart_target_col) == barchart_target)
+
+
+
+```
+
 # Community visualisation: barplots
 This chunk is designed to plot relative abundances of you microbial community data, this takes the microbial community and you can select at which level the plotting is done, the labeling is two levels to ensure comprehensiveness, and detail (higher phylogenetic level and lower for the detail). The main color is determined by the high level taxonomy, variations of this main color are used in the lower levels. Several choices can be made, a relative abundance threshold level, which is a cutoff level for relative abundance, if a taxon does not meet this threshold i.e. all taxa with relative abundance below this threshold are put into 'Others'
 ```{r plot abundance, fig.width=12, fig.height=8}
+config <- yaml::read_yaml(config_path)
 # --- SETUP ---
 source(config$scripts$barplot_main)
 # --- 1. INPUT FROM CONFIG ---
@@ -241,10 +285,14 @@ data_for_plot <- prepare_abundance_data(
   threshold  = v_glob$threshold 
 )
 # This prepared the colours, so custom colours are assigned to the created groups depending on the taxonomic specification.
-my_colors <- get_shaded_palette(data_for_plot, pal_choice)
+#Run this once
+#set
+
+#my_colors <- get_shaded_palette(data_for_plot, pal_choice)
 
 # --- 3. DYNAMIC PLOTTING ---
 # This is a complex plotting command that is constructed to take into acount the previously specified parameters, high and low taxonomic levels, relative abundance threshold cutoff, how to group the samples for plotting. So this information is also found on the finally generated plot
+
 Relative_Abundance_Plot <- ggplot(data_for_plot, aes(x = !!sym(v_glob$facet_var), y = Abundance, fill = Hierarchical_Label)) +
   geom_bar(stat = "identity", position = "stack", color = "black", size = 0.05) +
   scale_fill_manual(values = my_colors) +
@@ -334,6 +382,7 @@ Alpha diversity describes the complexity of a microbial community within a singl
 > **Important:** Alpha diversity calculations are sensitive to normalization. We use the filtered, non-transformed object (`mibi_phylo_object_filt`) to ensure we are counting physical reads, not mathematical ratios.
 
 ```{r plot different alpha diversity measures, fig.width=12, fig.height=8}
+config <- yaml::read_yaml(config_path)
 # --- 1. SETUP & INPUT ---
 # Use the ps work object
 alfa_diversity_phyloseq_object <- ps_work
@@ -353,6 +402,8 @@ plot_x_axis   <- config$Alpha_Diversity$plotting$x_axis
 plot_color_by <- config$Alpha_Diversity$plotting$color_by
 plot_cols     <- config$Alpha_Diversity$plotting$grid_cols
 
+
+
 # Logic to handle 'all' vs specific metrics
 if (config$Alpha_Diversity$plotting$selected_metrics == "all") {
   plot_metrics <- plot_metrics_all
@@ -360,7 +411,22 @@ if (config$Alpha_Diversity$plotting$selected_metrics == "all") {
   plot_metrics <- config$Alpha_Diversity$plotting$selected_metrics
 }
 
+
+# Define your strict logical order here
+#desired_order <- c("Section_1", "Section_2", "Section_3", "Section_4", "Section_5") # Change this based on the variables used for
+
+# --- CUSTOMISATION BEFORE ALPHA PLOTTING ---
+# Automatically apply the ordering to the X-axis column if found in alpha_output
+#if (plot_x_axis %in% colnames(alpha_output)) {
+#  alpha_output[[plot_x_axis]] <- factor(alpha_output[[plot_x_axis]], levels = desired_order)
+#}
+
+# Automatically apply the ordering to the Color column if found in alpha_output
+#if (plot_color_by %in% colnames(alpha_output)) {
+#  alpha_output[[plot_color_by]] <- factor(alpha_output[[plot_color_by]], levels = desired_order)
+}
 # --- 4. RUN PLOTTING SCRIPT ---
+
 source(config$scripts$alpha_plot)
 
 # Display and Save
@@ -387,15 +453,19 @@ Beta diversity quantifies the "distance" or "dissimilarity" between pairs of sam
 > **Note:** For Aitchison, we use the CLR-imputed objects. For Bray, Jaccard, and UniFrac, we use Total Sum Scaling (TSS) to ensure sequencing depth doesn't bias the distances.
 
 ```{r plot different beta diversity measures, fig.width=12, fig.height=8}
+config <- yaml::read_yaml(config_path)
 # --- 1. CONFIG INPUT ---
 beta_metric      <- config$Beta_Diversity$basic$metric
 clr_variant      <- config$Beta_Diversity$basic$clr_variant
 color_var        <- config$Beta_Diversity$color_var
 shape_var        <- config$Beta_Diversity$shape_var
 group_clustering <- config$Beta_Diversity$group_clustering
+show_ellipses    <- isTRUE(config$Beta_Diversity$show_ellipses)
+show_labels      <- isTRUE(config$Beta_Diversity$show_labels)
 
 # --- 2. EXECUTION ---
 source(config$scripts$beta_calc)
+
 source(config$scripts$beta_vis_basic)
 
 plot(p_beta)
@@ -406,20 +476,29 @@ plot(p_beta)
 #In this section, we upgrade the ordination by mapping environmental variables (vectors) and group shapes (hulls) onto the microbial landscape.
 
 ```{r plot beta diversity measures PCA using aitchison distance, fig.width=12, fig.height=8}
+config <- yaml::read_yaml(config_path)
 # --- USER INPUT: Beta Diversity Configuration ---
 # --- 1. CONFIG INPUT ---
-beta_metric      <- "aitchison" 
+beta_metric      <- config$Beta_Diversity$basic$metric
 clr_variant      <- config$Beta_Diversity$basic$clr_variant
 color_var        <- config$Beta_Diversity$color_var
 shape_var        <- config$Beta_Diversity$shape_var
 group_clustering <- config$Beta_Diversity$group_clustering
+show_ellipses    <- isTRUE(config$Beta_Diversity$show_ellipses)
+show_labels      <- isTRUE(config$Beta_Diversity$show_labels)
+labels           <- config$Beta_Diversity$labels
 
-# Advanced parameters
-env_variables        <- config$Beta_Diversity$advanced$env_vars
-top_asv_n            <- config$Beta_Diversity$advanced$top_asv_n
-target_level         <- config$Beta_Diversity$advanced$target_tax_level
-arrow_reduction_taxa <- config$Beta_Diversity$advanced$pca_arrow_taxa
-arrow_reduction_env  <- config$Beta_Diversity$advanced$pca_arrow_env
+# Advanced parameters (FIXED parsing paths)
+
+numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
+categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables
+top_asv_n                      <- config$Beta_Diversity$advanced$top_asv_n
+target_level                   <- config$Beta_Diversity$advanced$target_tax_level
+filter_taxon_loadings          <- isTRUE(config$Beta_Diversity$advanced$filter_taxon_loadings)
+filter_taxon_abundance_filter  <- config$Beta_Diversity$advanced$filter_taxon_abundance_filter
+filter_taxon_prevalence_filter <- config$Beta_Diversity$advanced$filter_taxon_prevalence_filter 
+arrow_reduction_taxa           <- config$Beta_Diversity$advanced$pca_arrow_taxa
+arrow_reduction_env            <- config$Beta_Diversity$advanced$pca_arrow_env
 
 # --- 2. EXECUTION ---
 source(config$scripts$beta_calc)
@@ -431,15 +510,19 @@ plot(p_beta_PCA)
 ## 5.3 Advanced Ordination: Environmental Correlation PCoA variant
 
 ```{r plot beta diversity measures PCoA using various distance matrices as input, fig.width=12, fig.height=8}
+config <- yaml::read_yaml(config_path)
 # --- USER INPUT: Beta Diversity Configuration ---
 # --- 1. CONFIG INPUT ---
 beta_metric      <- config$Beta_Diversity$basic$metric # Usually wunifrac/bray
 color_var        <- config$Beta_Diversity$color_var
 shape_var        <- config$Beta_Diversity$shape_var
 group_clustering <- config$Beta_Diversity$group_clustering
-
+show_ellipses    <- isTRUE(config$Beta_Diversity$show_ellipses)
+show_labels      <- isTRUE(config$Beta_Diversity$show_labels)
+labels           <- config$Beta_Diversity$labels
 # Advanced parameters (PCoA specific scaling)
-env_variables        <- config$Beta_Diversity$advanced$env_vars
+numerical_env_vars            <- config$Beta_Diversity$advanced$numerical_env_vars
+categorical_env_vars          <- config$Beta_Diversity$advanced$categorical_env_vars
 top_asv_n            <- config$Beta_Diversity$advanced$top_asv_n
 target_level         <- "class" # Or pull from config
 arrow_reduction_taxa <- config$Beta_Diversity$advanced$pcoa_arrow_taxa
@@ -447,10 +530,80 @@ arrow_reduction_env  <- config$Beta_Diversity$advanced$pcoa_arrow_env
 
 # --- 2. EXECUTION ---
 source(config$scripts$beta_calc)
+
+#Customisation before plotting :
+desired_order <- c( "INF","EFF", "MF1", "MF2", "MF5", "MF6", "MF9", "MF10") # Change this based on the variables used for plotting
+# Check if shape_var column exists in the phyloseq metadata and refactor it
+if (shape_var %in% colnames(phyloseq::sample_data(ps_beta_input))) {
+  # 1. Pull the metadata out
+  meta_tmp <- data.frame(phyloseq::sample_data(ps_beta_input))
+  # 2. Convert your target column to the ordered factor
+  meta_tmp[[shape_var]] <- factor(meta_tmp[[shape_var]], levels = desired_order)
+  # 3. Put it right back into the active phyloseq object
+  phyloseq::sample_data(ps_beta_input) <- phyloseq::sample_data(meta_tmp)
+}
+
 source(config$scripts$beta_vis_pcoa)
 
 plot(p_beta_PCoA)
 ```
+
+
+#RDA
+```{r}
+ggplot() +
+  # A. Origin Crosshairs
+  geom_hline(yintercept = 0, linetype = "dashed", color = "gray75", linewidth = 0.5) +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "gray75", linewidth = 0.5) +
+  
+  # B. Microbial Samples (Points) - Colored by Wetland, shaped by Depth
+  geom_point(data = sample_coords, 
+             aes(x = RDA1, y = RDA2, color = CW_Number, shape = Sample_depth_information), 
+             size = 2.8, alpha = 0.75) +
+  
+  # C. Continuous Chemistry (Arrows)
+  geom_segment(data = arrow_coords,
+               aes(x = 0, y = 0, xend = RDA1 * arrow_scale, yend = RDA2 * arrow_scale),
+               arrow = arrow(length = unit(0.20, "cm")), 
+               color = "firebrick3", linewidth = 0.7, alpha = 0.8) +
+  
+  # D. Labels for Chemistry Arrows
+  geom_text(data = arrow_coords,
+            aes(x = RDA1 * (arrow_scale + 0.2), y = RDA2 * (arrow_scale + 0.2), label = Variable),
+            color = "firebrick4", fontface = "bold", size = 3.5) +
+  
+  # E. Categorical Feature Centroids (Labels in white boxes)
+  geom_label(data = centroid_coords,
+             aes(x = RDA1 * arrow_scale, y = RDA2 * arrow_scale, label = Factor_Level),
+             color = "dodgerblue4", fill = "white", fontface = "bold", size = 3.5,
+             label.padding = unit(0.15, "lines"), box.padding = 0.5, alpha = 0.9) +
+  
+  # F. Theme & Aesthetics
+  theme_bw() +
+  scale_color_brewer(palette = "Set1") + 
+  labs(title = "Robust Aitchison RDA Ordination Biplot",
+       subtitle = "Model Adj. R² = 12.4%, Global p = 0.001 (All marginal terms p < 0.05)",
+       x = "RDA1 (6.78% variance explained)", 
+       y = "RDA2 (4.21% variance explained)",
+       color = "Constructed Wetland",
+       shape = "Sample Depth (m)") +
+  theme(panel.grid.major = element_blank(),
+        panel.grid.minor = element_blank(),
+        plot.title = element_text(face = "bold", size = 13),
+        axis.title = element_text(face = "bold", size = 11),
+        legend.title = element_text(face = "bold"),
+        legend.position = "right")
+
+
+
+
+
+
+
+
+
+```
+
 
 ## 6. Differential_abundance_LinDA.R
 ### We use the filtered and not normalised phyloseq object, since LinDA handels the normalisation
@@ -458,10 +611,89 @@ plot(p_beta_PCoA)
 ### select the phylogenetic level to what the taxa should be agglomerated.
 In this script we do a differential abundance analysis. In the following chunk calculations are made.
 ```{r, input script for LinDA here the model is defined and differental abundance calculations are done}
+config <- yaml::read_yaml(config_path)
 # --- 1. PREPARATION ---
 target_level_linda <- config$Differential_Abundance$target_level
-source(config$scripts$linda_prepare)
 
+# In order te get a readable plot for LinDA, it is better to agglomerate the reads to a specific phylogenetic level
+# they you get information on how mayor groups of bacteria respond to the specified model, 
+# otherwise raw sequences will be given.
+#-----------------------------------------------------------------------------------------
+#ps_glommed <- phyloseq::tax_glom(ps_work, taxrank = target_level_linda, NArm = TRUE) 
+#----------------------------------------------------------------------------------------
+#In this step all ASVs which have the same taxonomic level will be agglomerated.
+# For plotting we need to change the sequences in the OTU table to a specific taxonomic label otherwise raw sequences will be visible on the plot.
+otu_tab <- as.data.frame(t(otu_table(ps_glommed)))
+# extract the OTU table from the agglomerated object
+tax_tab <- as.data.frame(tax_table(ps_glommed)) # extract the taxonomy table from the agglomerated object
+taxa_labels <- as.character(tax_tab[, target_level_linda])
+unique_taxa_ids <- make.unique(taxa_labels, sep = ".")
+#is then added to the otu and tax table in the following line: 
+rownames(otu_tab) <- unique_taxa_ids
+rownames(tax_tab) <- unique_taxa_ids
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#METADATA FORMATTING
+#extract the metadata
+metadata_correct_format <- data.frame(sample_data(ps_glommed))
+#convert it to a suitable format
+# Define your variables of interest
+categ_env_variables   <- config$Differential_Abundance$categ_env_variables
+numeric_env_variables <- config$Differential_Abundance$numeric_env_variables
+# =====================================================================
+# 1. AUTOMATED FACTOR CONVERSION LAYER (Generalized)
+# =====================================================================
+for (cat_var in categ_env_variables) {
+  if (cat_var %in% colnames(metadata_correct_format)) {
+    # Clean up column to a character format first, then cast to a standard factor
+    # This ensures R handles any messy mixed-type inputs or text labels cleanly
+    metadata_correct_format[[cat_var]] <- factor(as.character(metadata_correct_format[[cat_var]]))
+    message(paste("Successfully converted to factor:", cat_var))
+  } else {
+    warning(paste("Configured categorical variable not found in dataset columns:", cat_var))
+  }
+}
+# =====================================================================
+# 2. AUTOMATED NUMERICAL CONVERSION LAYER (Generalized)
+# =====================================================================
+for (num_var in numeric_env_variables) {
+  if (num_var %in% colnames(metadata_correct_format)) {
+    # Step A: Convert to character and strip common hidden spacing/text issues
+    clean_chars <- as.character(metadata_correct_format[[num_var]])
+    clean_chars <- trimws(clean_chars) # Remove leading/trailing whitespaces
+    # Step B: Cast explicitly to numeric double
+    # Suppress warnings temporarily so R doesn't flood the console if 
+    # text like "missing" or "BDL" naturally turns into NA
+    suppressWarnings({
+      numeric_vector <- as.numeric(clean_chars)
+    })
+    # Save the clean numeric vector back into your corrected formatting table
+    metadata_correct_format[[num_var]] <- numeric_vector
+    message(paste("Successfully converted to numeric metric:", num_var))
+    # Optional Safety Check: Report if the conversion introduced any new NAs
+    raw_na_count <- sum(is.na(clean_chars)) # check NAs before parsing
+    new_na_count <- sum(is.na(numeric_vector))
+    if (new_na_count > raw_na_count) {
+      warning(paste0(
+        "Variable '", num_var, "' contained non-numeric text strings (e.g., 'ND', '<LOD', or blanks) ",
+        "which have been automatically forced to NA values."
+      ))
+    }
+  } else {
+    warning(paste("Configured numeric variable not found in dataset columns:", num_var))
+  }
+}
+all_target_cols <- c(categ_env_variables, numeric_env_variables)
+#-----------------------------------------------------------------------------
+# Extract ONLY target metadata columns into a fresh table
+linda_metadata <- metadata_correct_format[, all_target_cols]
+# Optional check the structure of the final metadata object 
+str(linda_metadata)
+
+
+#------------------------------------------------------------------------------------------------------------------
+# Setting up the model
+config <- yaml::read_yaml(config_path)
 # --- 2. MODEL SETUP ---
 l_mod <- config$Differential_Abundance$model
 
@@ -469,14 +701,17 @@ l_mod <- config$Differential_Abundance$model
 linda_formula_string <- paste(l_mod$formula, collapse = "")
 
 # Set Reference dynamically
-meta_df[[l_mod$main_var]] <- relevel(factor(meta_df[[l_mod$main_var]]), 
+linda_metadata [[l_mod$main_var]] <- relevel(factor(linda_metadata [[l_mod$main_var]]), 
                                      ref = l_mod$ref_group)
+
+# 3. Ensure your random intercept is strictly classified as a factor
+linda_metadata$CW_number_MF_number <- factor(linda_metadata$CW_number_MF_number)
 
 # --- 3. RUN LINDA ---
 l_params <- config$Differential_Abundance$params
 linda_res <- linda(
   feature.dat     = otu_tab, 
-  meta.dat        = meta_df, 
+  meta.dat        = linda_metadata, 
   formula         = linda_formula_string,
   feature.dat.type = "count",
   prev.filter     = l_params$prev_filter,
@@ -487,8 +722,8 @@ linda_res <- linda(
   alpha           = l_params$alpha,
   p.adj.method    = l_params$p_adj_method
 )
-
 # From this linda output you can plot multiple things
+
 ```
 
 # Plotting the Linda results
@@ -500,9 +735,166 @@ Now if we are interested in how the bacteria differ in log fold changes with res
 
 There is the possibility: "Groundwater_levelbelow:SUM.PAHs..EPA." which will indicate how the taxa 'respond to PAH levels below groundwater level' but the interaction term changes the interpretation greatly. So be carefull with the interpretation.
 ```{r plot LinDA results, fig.width=config$Differential_Abundance$plotting$fig_width, fig.height=config$Differential_Abundance$plotting$fig_height}
+config <- yaml::read_yaml(config_path)
 # Define which effect to visualize from Config
 var_to_plot <- config$Differential_Abundance$plotting$var_to_plot
 
+log_fold_cutoff_plotting <- "1"
+
+colour_positive <- "#17becf"
+
+colour_negative <- "#f8766d"
+## dodgerblue4, firebrick4
+### 17becf, #f8766d
+### DARK : #0a0d36
+names(linda_res$output)
+#>  names(linda_res$output)
+# [1] "time_continuous"                                   "sample_depth_information0.60-0.80"                
+#[3] "manganese2_mg_l"                                   "iron2_mg_l"                                       
+#[5] "concentration_BTEX_ug_l"                           "phosphorus_total"                                 
+#[7] "time_continuous:sample_depth_information0.60-0.80"
+
+var_to_plot <- "sulfate_mg_l"
 # Run the plotting script
 source(config$scripts$linda_plot)
 ```
+
+
+Small chunk of code to test which models are the best 
+```{r}
+# Calculate your overall Aitchison (Euclidean on CLR) distance matrix
+distance_matrix <- vegdist(t(otu_table(mibi_bmr_clr)), method = "euclidean")
+
+# Model 1: Additive formula (No Interaction)
+permanova_additive <- adonis2(distance_matrix ~ time_continuous + sample_depth_information + 
+                              electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow + concentration_BTEX_ug_l + phosphorus_total, 
+                              data = linda_metadata, permutations = 999)
+
+print(permanova_additive)
+# Model 2: Interaction formula (Time * Depth)
+permanova_interaction <- adonis2(distance_matrix ~ time_continuous * sample_depth_information + 
+                                 electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow + concentration_BTEX_ug_l +phosphorus_total, 
+                                 data = linda_metadata, permutations = 999)
+print(permanova_interaction)
+
+
+```
+
+
+#Snowflake plots 
+
+# Snowflake visualisation 
+```{r}
+devtools::load_all("scripts/Snowflake")
+library(jsonlite)
+library(webshot)
+Object_For_Snowflake <-ps_work
+
+#generate the microbiome composition object:
+# You can define a specific beta divesity metric to later use to colour in the source nodes:unifrac 
+MCG_Snowflake<- build_mc_graph(ps_object = Object_For_Snowflake, beta_dist = "wunifrac")
+#Differet visualisation methods:
+set.seed(12)
+# Colour in the source nodes with information with regard to the alfa diversity
+forceGraph(graph_object = MCG_Snowflake, source_color = "alphaObserved", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+# Colour in the source nodes with information with regard to the beta diversity ordination (bray curtis in this case)
+forceGraph(graph_object = MCG_Snowflake, source_color = "beta", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+temp_mcg <- MCG_Snowflake
+  
+  
+# Colour in the source nodes by setting a specific variable as the grouping varriable
+temp_mcg$nodes$group <- temp_mcg_version1$nodes$timepoint
+
+# Make sure to include both the groupingVariable = "group", source_color = "group" arguments, otherwise it won't work
+
+forceGraph(graph_object = temp_mcg, groupingVariable = "group", source_color = "group", target_color = "abundance", nodeTitle = c("group","id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+###
+```
+```{r}
+
+
+
+```
+
+
+```{r}
+devtools::load_all("scripts/Snowflake")
+set.seed(12)
+#Object_For_Snowflake <-ps_work
+# 1. Build the graph object normally
+#MCG_Snowflake<- build_mc_graph(ps_object = Object_For_Snowflake, beta_dist = "wunifrac")
+
+#Add a grouping varriable for plotting
+MCG_Snowflake$nodes$group <- MCG_Snowflake$nodes$timepoint
+library(htmltools)
+# Define your save path
+save_path <- "results/Snowflake_Results"
+if (!dir.exists(save_path)) dir.create(save_path, recursive = TRUE)
+#Different ways of filtering out the 'Target Genera'
+        # 1. Filter for genera found in > 1 sample
+        multi_sample_nodes <- MCG_Snowflake$nodes[
+          !is.na(MCG_Snowflake$nodes$genus) & MCG_Snowflake$nodes$observedIn > 6, 
+        ]
+        target_genera <- names(sort(table(multi_sample_nodes$genus), decreasing = TRUE))
+        # 2. Filter for genera found in a certain abundance cutoff
+        abudant_genera_nodes <- MCG_Snowflake$nodes[
+          !is.na(MCG_Snowflake$nodes$genus) & MCG_Snowflake$nodes$abundance > 0.001, 
+        ]
+        target_genera <- names(sort(table(abudant_genera_nodes$genus), decreasing = TRUE))
+
+# 3. Create the Grid HTML 
+# We remove the background and shadows to keep the immage clean for editing
+grid_items <- lapply(target_genera, function(g_name) {
+  highlight_vector <- c("p1","p2","p3","p4","p5", g_name)
+  
+  p <- forceGraph(
+    graph_object = MCG_Snowflake,
+    target_color = highlight_vector,groupingVariable = "group", source_color = "group",
+    nodeTitle = c("id", "abundance", "genus", "Sample_NAME")
+  )
+  tags$div(
+    style = "display: inline-flex; 
+             flex-direction: column; 
+             align-items: left; 
+             justify-content: center; 
+             width: 44%; 
+             margin: 1%; 
+             vertical-align: top;
+             horizonatal-align: left;
+             background: white; position: relative;",
+    tags$h4(g_name, style = "font-family: sans-serif; text-align: center;align-items: center"),
+    p
+  )
+})
+
+html_grid <- tags$div(
+  style = "width: 1800px; background: grey;align-items: center",
+  tagList(grid_items)
+)
+
+# 4. Save Temp HTML
+temp_html <- file.path(save_path, "temp_for_svg.html")
+save_html(html_grid, temp_html)
+
+# 5. Export to png
+# webshot2 uses Chromium to render the page and can export directly to SVG
+webshot(
+  url = temp_html,
+  file = file.path(save_path, "Snowflake_Final_Figure.png"),
+  vwidth = 1750,
+  vheight = 1600, delay = 5
+)
+
+message("PNG Figure saved to: ", file.path(save_path, "Snowflake_Final_Figure.png"))
+
+```
+
+
+
+
+
+
+
