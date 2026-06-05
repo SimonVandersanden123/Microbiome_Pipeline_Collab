@@ -1,7 +1,6 @@
 # scripts/05_beta_diversity_RDA.R
 # Prepare the data for the RDA ordination
 
-
 # Extract the CLR-transformed OTU/ASV table (Species matrix)
 # vegan expects samples as rows and species as columns
 otu_mat <- as(otu_table(mibi_bmr_clr), "matrix")

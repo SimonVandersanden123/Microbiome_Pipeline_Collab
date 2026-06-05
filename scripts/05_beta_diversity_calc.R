@@ -53,21 +53,22 @@ dist_matrix_complete <- as.dist(as.matrix(dist_matrix)[complete_sample_ids, comp
 metadata_complete[numeric_env_variables] <- lapply(metadata_complete[numeric_env_variables], function(x) as.numeric(as.character(x)))
 
 # =====================================================================
-# AUTOMATED FACTOR CONVERSION LAYER (Run exactly once)
+# AUTOMATED FACTOR CONVERSION LAYER (Generalized)
 # =====================================================================
 for (cat_var in categ_env_variables) {
   if (cat_var %in% colnames(metadata_complete)) {
-    if (cat_var == "Timepoint") {
-      metadata_complete[[cat_var]] <- factor(
-        metadata_complete[[cat_var]], 
-        levels = c("T0", "T1", "T2", "T3", "T4", "T5", "T6", "T7", "T8"), 
-        ordered = TRUE
-      )
-    } else {
-      metadata_complete[[cat_var]] <- factor(metadata_complete[[cat_var]])
-    }
+    
+    # Clean up column to a character format first, then cast to a standard factor
+    # This ensures R handles any messy mixed-type inputs or text labels cleanly
+    metadata_complete[[cat_var]] <- factor(as.character(metadata_complete[[cat_var]]))
+    
+    message(paste("Successfully converted to factor:", cat_var))
+    
+  } else {
+    warning(paste("Configured categorical variable not found in dataset columns:", cat_var))
   }
 }
+# =====================================================================
 # =====================================================================
 
 # 4. Formulate formula dynamically and run PERMANOVA

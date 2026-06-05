@@ -1,21 +1,73 @@
 # scripts/05_beta_diversity_RDA.R
+# Extract the CLR-transformed OTU/ASV table (Species matrix)
+otu_mat <- as(otu_table(mibi_bmr_clr), "matrix")
+if (taxa_are_rows(mibi_bmr_clr)) {
+  otu_mat <- t(otu_mat)
+}
+# Ensure samples are ROWS, taxa are COLUMNS for vegan
+# Extract the sample metadata (Environmental matrix)
+# Ensure samples are ROWS, taxa are COLUMNS for vegan
+# Extract the sample metadata (Environmental matrix)
+metadata_raw <- as.data.frame(as(sample_data(mibi_bmr_clr), "data.frame"))
+
+# Create your active data frame using your naming convention
+metadata_correct_format <- metadata_raw
 
 # Prepare the data for the RDA ordination
-# 1. Extract the CLR table safely
-# Ensure samples are ROWS, taxa are COLUMNS for vegan
+
 # Define your variables of interest
-discrete_cols   <- c("Timepoint", "Sample_depth_information", "CW_Number")
-continuous_cols <- c("iron2", "phosphorus_total", "concentration_BTEX", "sulfate", 
-                     "redoxpot", "temperature", "oxygen", "PAH_total_16")
+categ_env_variables   <- config$Beta_Diversity$advanced_for_rda$categ_env_variables
+numeric_env_variables <- config$Beta_Diversity$advanced_for_rda$numeric_env_variables
 
-#Hoe noemen in de config file ?
-#numeric_env_variables_RDA
-#categ_env_variables_RDA
-
-all_target_cols <- c(discrete_cols, continuous_cols)
-
+# =====================================================================
+# 1. AUTOMATED FACTOR CONVERSION LAYER (Generalized)
+# =====================================================================
+for (cat_var in categ_env_variables) {
+  if (cat_var %in% colnames(metadata_correct_format)) {
+    # Clean up column to a character format first, then cast to a standard factor
+    # This ensures R handles any messy mixed-type inputs or text labels cleanly
+    metadata_correct_format[[cat_var]] <- factor(as.character(metadata_correct_format[[cat_var]]))
+    message(paste("Successfully converted to factor:", cat_var))
+  } else {
+    warning(paste("Configured categorical variable not found in dataset columns:", cat_var))
+  }
+}
+# =====================================================================
+# 2. AUTOMATED NUMERICAL CONVERSION LAYER (Generalized)
+# =====================================================================
+for (num_var in numeric_env_variables) {
+  if (num_var %in% colnames(metadata_correct_format)) {
+    # Step A: Convert to character and strip common hidden spacing/text issues
+    clean_chars <- as.character(metadata_correct_format[[num_var]])
+    clean_chars <- trimws(clean_chars) # Remove leading/trailing whitespaces
+    # Step B: Cast explicitly to numeric double
+    # Suppress warnings temporarily so R doesn't flood the console if 
+    # text like "missing" or "BDL" naturally turns into NA
+    suppressWarnings({
+      numeric_vector <- as.numeric(clean_chars)
+    })
+    # Save the clean numeric vector back into your corrected formatting table
+    metadata_correct_format[[num_var]] <- numeric_vector
+    message(paste("Successfully converted to numeric metric:", num_var))
+    # Optional Safety Check: Report if the conversion introduced any new NAs
+    raw_na_count <- sum(is.na(clean_chars)) # check NAs before parsing
+    new_na_count <- sum(is.na(numeric_vector))
+    if (new_na_count > raw_na_count) {
+      warning(paste0(
+        "Variable '", num_var, "' contained non-numeric text strings (e.g., 'ND', '<LOD', or blanks) ",
+        "which have been automatically forced to NA values."
+      ))
+    }
+  } else {
+    warning(paste("Configured numeric variable not found in dataset columns:", num_var))
+  }
+}
+all_target_cols <- c(categ_env_variables, numeric_env_variables)
+#-----------------------------------------------------------------------------
+# Step 1: Extract ONLY target metadata columns into a fresh table
+#-----------------------------------------------------------------------------
 # Step 1: Extract ONLY target columns into a fresh table
-rda_metadata <- metadata_scaled[, all_target_cols]
+rda_metadata <- metadata_correct_format[, all_target_cols]
 
 # Step 2: Drop rows with NA values in our selected columns 
 # RDA cannot compute with missing environmental data
@@ -24,30 +76,51 @@ rda_metadata_clean <- rda_metadata[samples_to_keep, ]
 
 # Step 3: Align your compositional OTU table to match the exact same samples
 # (This filters out the matching rows from your CLR transformed matrix)
-otu_clr_clean <- otu_clr[samples_to_keep, ]
-
-# Output status check
-cat("Original samples:", nrow(metadata_scaled), "\nCleaned samples remaining:", nrow(rda_metadata_clean))
+otu_clr_clean <- otu_mat[samples_to_keep, ]
 
 # Scale only the continuous columns (Mean = 0, SD = 1)
-rda_metadata_clean[, continuous_cols] <- scale(rda_metadata_clean[, continuous_cols])
+rda_metadata_clean[, numeric_env_variables] <- scale(rda_metadata_clean[, numeric_env_variables])
 
 # Quick verification check to ensure everything looks correct
 str(rda_metadata_clean)
+
+#-------------------------------------------------------------------------------------
+#Check if there are correlations between you different environmental data
+#-------------------------------------------------------------------------------------
 # Plot the correlation matrix to check for which metadata needs to be included in the model
-library(corrplot)
+# 1. Clone your clean numeric data so we don't overwrite your master metadata
+cor_data <- rda_metadata_clean[, numeric_env_variables]
 
-cor_matrix <- cor(rda_metadata_clean[, continuous_cols], method = "pearson")
+# 2. Rename columns to short codes so they don't overlap in the plot
+# (Make sure the order matches your numeric_env_variables exactly!)
+colnames(cor_data) <- c(
+  "BTEX_ug", 
+  "PAH_ug", 
+  "Total_Fe2_acceptor", 
+  "SO4_acceptor", 
+  "Mn2_acceptor", 
+  "Total_Acceptors_consumed", 
+  "Donor_Acceptor_Balance"
+)
 
+# 3. Re-calculate the Pearson matrix with the clean, short names
+cor_matrix <- cor(cor_data, method = "pearson")
+
+# 4. Set plot margins to give labels breathing room 
+# par(mar = c(bottom, left, top, right))
+par(mar = c(1, 1, 4, 1)) 
+
+# 5. Run the optimized corrplot
 corrplot(cor_matrix, 
-         method = "ellipse",       # Represents strength/direction using ellipses
-         type = "upper",           # Display only the upper triangle to avoid redundancy
-         order = "hclust",         # Hierarchically clusters correlated variables together
-         addCoef.col = "black",    # Overlay correlation coefficients as text
+         method = "ellipse",       # Ellipses for strength/direction
+         type = "upper",           # Upper triangle only
+         order = "hclust",         # Group highly correlated variables together
+         addCoef.col = "black",    # Text correlation coefficients
+         number.cex = 0.8,         # Scale down the number text size slightly so it fits inside ellipses
          tl.col = "black",         # Text color for labels
          tl.srt = 45,              # Rotate labels 45 degrees
-         diag = FALSE)             # Omit the diagonal line (correlation of 1 with self)
-
+         tl.cex = 0.85,            # Scale down label text size so it stays on screen
+         diag = FALSE)             # Omit self-diagonal (1.00)
 
 #Foreward model selection:
 #

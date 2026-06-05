@@ -66,10 +66,10 @@ Barplot_specific:
   # Section 3.1: Global Community Barplots
   global_barplots:
     high_level: "phylum"
-    low_level: # "class"
-    facet_var: "Timepoint_Sample_depth_information"
-    threshold: 0.05 #
-    fig_width: 12
+    low_level:  "class"
+    facet_var: "MF_number"
+    threshold: 0.5 #
+    fig_width: 10
     fig_height: 8
     dpi: 300
 
@@ -106,12 +106,12 @@ Alpha_Diversity:
 ### 5.0 Beta Diversity: Community Trait Analysis
 Beta_Diversity:
   # Global Plotting Settings
-  color_var: "Timepoint" #Sample_depth_information
-  shape_var: "Sample_depth_information"
-  show_ellipses: true
-  show_labels: false
-  labels: "Sample_depth_information" #Timepoint
-  group_clustering: "Timepoint_Sample_depth_information"
+  color_var: "Nanobubbles_On" #Sample_depth_information
+  shape_var: "sample_depth_information"
+  show_ellipses: false
+  show_labels: true
+  labels: "timepoint_MF_number" #Timepoint
+  group_clustering: "sample_names"
   
   fig_width: 12
   fig_height: 8
@@ -123,10 +123,11 @@ Beta_Diversity:
 
   # Section 5.2 & 5.3: Advanced (Vectors/Environmental Fit)
   advanced:
-    numeric_env_variables: ["iron2", "phosphorus_total", "concentration_BTEX", "sulfate", "redoxpot", "temperature", "oxygen", "PAH_total_16"] #["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
-    categ_env_variables: ["Timepoint", "Sample_depth_information", "CW_Number"] # ["Timepoint", "Sample_depth_information", "CW_Number"]
-    top_asv_n: 0
-    target_tax_level: "genus"
+    numeric_env_variables: ["concentration_BTEX_ug_l", "phosphorus_total", "redoxpot", "pH", "EGV3", "naphthalene_PAH_ug_l", "iron2_TOTAL_mmoles_e_l__sulfate_relative_to_1D_flow", "sulfate_consumption_1D_flow_mmols_e_l_no_negatives", "manganese2_electron_acceptor_capacity_mmol_e_l",
+    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_influent"] #["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
+    categ_env_variables: ["timepoint", "sample_depth_information", "electron_balance_1D_flow", "dominant_electron_acceptor_species_1D_flow"] # ["Timepoint", "Sample_depth_information", "CW_Number"]
+    top_asv_n: 20
+    target_tax_level: "family"
     filter_taxon_loadings: true
     filter_taxon_abundance_filter: 0.005
     filter_taxon_prevalence_filter: 0.0001 #roughly equates to being found in at least 6 different samples
@@ -136,29 +137,42 @@ Beta_Diversity:
     # Scaling for PCoA
     pcoa_arrow_taxa: 1
     pcoa_arrow_env: 1
+      # Section 5.2 & 5.3: Advanced (Vectors/Environmental Fit)
+  advanced_for_rda:
+    numeric_env_variables: ["concentration_BTEX_ug_l", "naphthalene_PAH_ug_l", "iron2_TOTAL_mmoles_e_l__sulfate_relative_to_1D_flow", "sulfate_consumption_1D_flow_mmols_e_l_no_negatives", "manganese2_electron_acceptor_capacity_mmol_e_l",
+    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "manganese2_mg_l", "iron2_mg_l","sulfate_mg_l", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow"] #["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
+    categ_env_variables: ["timepoint", "sample_depth_information", "CW_number", "electron_balance_1D_flow", "dominant_electron_acceptor_species_1D_flow"] # ["Timepoint", "Sample_depth_information", "CW_Number"]
+    top_asv_n: 0
+    target_tax_level: "family"
+    
+    
 ### 6.0 LinDA
 Differential_Abundance:
-  target_level: "family"
-  
+  target_level: "family" 
+  numeric_env_variables: ["concentration_BTEX_ug_l", "phosphorus_total", "redoxpot", "pH", "EGV3", "naphthalene_PAH_ug_l", "iron2_TOTAL_mmoles_e_l__sulfate_relative_to_1D_flow", "sulfate_consumption_1D_flow_mmols_e_l_no_negatives", "manganese2_electron_acceptor_capacity_mmol_e_l",
+    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "manganese2_mg_l", "iron2_mg_l", "sulfate_mg_l","time_continuous", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow"]
+  categ_env_variables: ["timepoint", "CW_number", "CW_number_MF_number" , "sample_depth_information", "electron_balance_1D_flow", "dominant_electron_acceptor_species_1D_flow"]
   # Model Configuration
   model:
-    main_var: "Groundwater"
-    ref_group: "Below_GW"
+    main_var: "sample_depth_information"
+    ref_group: "0.15-0.30"
     # Note: Use double quotes for the formula to handle special characters
-    formula: "~ Groundwater * SUM.PAHs..EPA. + (1 | SC_Number)"
-  
+    formula: "~ time_continuous * sample_depth_information + sulfate_mg_l +iron2_mg_l + concentration_BTEX_ug_l + phosphorus_total + (1 | CW_number_MF_number)"
+
   # LinDA Algorithmic Parameters
   params:
-    prev_filter: 0.0050
+    prev_filter: 0.05
     is.winsor: "TRUE"
     outlier_pct: 0.03
     zero_handling: "imputation"
     pseudo_cnt: 0.5
-    alpha: 0.05
+    alpha: 0.01
     p_adj_method: "BH"
 
   # Visualization
   plotting:
-    var_to_plot: "SUM.PAHs..EPA." # Must match one of names(linda_res$output)
+    var_to_plot: "time_continuous:sample_depth_information0.60-0.80" # Must match one of names(linda_res$output)
     fig_width: 12
-    fig_height: 8
+    fig_height: 12
+    
+    #time_continuous , sample_depth_information0.60-0.80

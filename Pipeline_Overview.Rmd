@@ -6,7 +6,7 @@ output:
   html_document: default
   pdf_document: default
 params:
-  config_file: "configs/Config_Griftpark_Wetland_All_Wetland_Samples.yaml"
+  config_file: "configs/Config_Griftpark_Wetland_All_Wetland_Samples_New_Metadata.yaml"
 ---
 
 ```{r setup, include=FALSE}
@@ -14,7 +14,7 @@ params:
 library(yaml)
 # SAFETY NET: If params doesn't exist (manual run), manually point to the file
 if (!exists("params") || is.null(params$config_file)) {
-  config_path <- "configs/Config_Griftpark_Wetland_All_Wetland_Samples.yaml"
+  config_path <- "configs/Config_Griftpark_Wetland_All_Wetland_Samples_New_Metadata.yaml"
 } else {
   config_path <- params$config_file
 }
@@ -38,6 +38,7 @@ library(scales)
 library(paletteer)
 library(stringr)
 library(yaml)
+set.seed(99)
 ```
 
 ## 1:Loading in and inspecting the different parts of the phyloseq object
@@ -261,10 +262,21 @@ sample_data(mibi_pseudo_clr) <- mibi_meta_table_new
 sample_data(mibi_bmr_clr) <- mibi_meta_table_new
 
 # Remane them again for interpretation:  Change the samples names, so they are based on the sample names:
-sample_names(ps_work) <- ps_work@sam_data$Sample_Names
-sample_names(mibi_tss) <- mibi_tss@sam_data$Sample_Names
-sample_names(mibi_pseudo_clr) <- mibi_pseudo_clr@sam_data$Sample_Names
-sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$Sample_Names
+sample_names(ps_work) <- ps_work@sam_data$sample_names
+sample_names(mibi_tss) <- mibi_tss@sam_data$sample_names
+sample_names(mibi_pseudo_clr) <- mibi_pseudo_clr@sam_data$sample_names
+sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$sample_names
+
+
+### Make subsets in ps_work per Constructed wetland for specific analysis:
+barchart_target   <- "CW_2"
+barchart_target_col <- "CW_number"
+# Professional trick: use 'get' to find the column name dynamically from the string in YAML
+ps_work <- subset_samples(ps_work, get(barchart_target_col) == barchart_target)
+mibi_bmr_clr <- subset_samples(mibi_bmr_clr, get(barchart_target_col) == barchart_target)
+
+
+
 ```
 
 # Community visualisation: barplots
@@ -286,10 +298,14 @@ data_for_plot <- prepare_abundance_data(
   threshold  = v_glob$threshold 
 )
 # This prepared the colours, so custom colours are assigned to the created groups depending on the taxonomic specification.
-my_colors <- get_shaded_palette(data_for_plot, pal_choice)
+#Run this once
+#set
+
+#my_colors <- get_shaded_palette(data_for_plot, pal_choice)
 
 # --- 3. DYNAMIC PLOTTING ---
 # This is a complex plotting command that is constructed to take into acount the previously specified parameters, high and low taxonomic levels, relative abundance threshold cutoff, how to group the samples for plotting. So this information is also found on the finally generated plot
+
 Relative_Abundance_Plot <- ggplot(data_for_plot, aes(x = !!sym(v_glob$facet_var), y = Abundance, fill = Hierarchical_Label)) +
   geom_bar(stat = "identity", position = "stack", color = "black", size = 0.05) +
   scale_fill_manual(values = my_colors) +
@@ -602,18 +618,95 @@ ggplot() +
 ```
 
 
-
-
 ## 6. Differential_abundance_LinDA.R
 ### We use the filtered and not normalised phyloseq object, since LinDA handels the normalisation
 ### To make plots readable agglomerate at the selected phylogenetic level
 ### select the phylogenetic level to what the taxa should be agglomerated.
 In this script we do a differential abundance analysis. In the following chunk calculations are made.
 ```{r, input script for LinDA here the model is defined and differental abundance calculations are done}
+config <- yaml::read_yaml(config_path)
 # --- 1. PREPARATION ---
 target_level_linda <- config$Differential_Abundance$target_level
-source(config$scripts$linda_prepare)
 
+# In order te get a readable plot for LinDA, it is better to agglomerate the reads to a specific phylogenetic level
+# they you get information on how mayor groups of bacteria respond to the specified model, 
+# otherwise raw sequences will be given.
+#-----------------------------------------------------------------------------------------
+#ps_glommed <- phyloseq::tax_glom(ps_work, taxrank = target_level_linda, NArm = TRUE) 
+#----------------------------------------------------------------------------------------
+#In this step all ASVs which have the same taxonomic level will be agglomerated.
+# For plotting we need to change the sequences in the OTU table to a specific taxonomic label otherwise raw sequences will be visible on the plot.
+otu_tab <- as.data.frame(t(otu_table(ps_glommed)))
+# extract the OTU table from the agglomerated object
+tax_tab <- as.data.frame(tax_table(ps_glommed)) # extract the taxonomy table from the agglomerated object
+taxa_labels <- as.character(tax_tab[, target_level_linda])
+unique_taxa_ids <- make.unique(taxa_labels, sep = ".")
+#is then added to the otu and tax table in the following line: 
+rownames(otu_tab) <- unique_taxa_ids
+rownames(tax_tab) <- unique_taxa_ids
+
+#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+#METADATA FORMATTING
+#extract the metadata
+metadata_correct_format <- data.frame(sample_data(ps_glommed))
+#convert it to a suitable format
+# Define your variables of interest
+categ_env_variables   <- config$Differential_Abundance$categ_env_variables
+numeric_env_variables <- config$Differential_Abundance$numeric_env_variables
+# =====================================================================
+# 1. AUTOMATED FACTOR CONVERSION LAYER (Generalized)
+# =====================================================================
+for (cat_var in categ_env_variables) {
+  if (cat_var %in% colnames(metadata_correct_format)) {
+    # Clean up column to a character format first, then cast to a standard factor
+    # This ensures R handles any messy mixed-type inputs or text labels cleanly
+    metadata_correct_format[[cat_var]] <- factor(as.character(metadata_correct_format[[cat_var]]))
+    message(paste("Successfully converted to factor:", cat_var))
+  } else {
+    warning(paste("Configured categorical variable not found in dataset columns:", cat_var))
+  }
+}
+# =====================================================================
+# 2. AUTOMATED NUMERICAL CONVERSION LAYER (Generalized)
+# =====================================================================
+for (num_var in numeric_env_variables) {
+  if (num_var %in% colnames(metadata_correct_format)) {
+    # Step A: Convert to character and strip common hidden spacing/text issues
+    clean_chars <- as.character(metadata_correct_format[[num_var]])
+    clean_chars <- trimws(clean_chars) # Remove leading/trailing whitespaces
+    # Step B: Cast explicitly to numeric double
+    # Suppress warnings temporarily so R doesn't flood the console if 
+    # text like "missing" or "BDL" naturally turns into NA
+    suppressWarnings({
+      numeric_vector <- as.numeric(clean_chars)
+    })
+    # Save the clean numeric vector back into your corrected formatting table
+    metadata_correct_format[[num_var]] <- numeric_vector
+    message(paste("Successfully converted to numeric metric:", num_var))
+    # Optional Safety Check: Report if the conversion introduced any new NAs
+    raw_na_count <- sum(is.na(clean_chars)) # check NAs before parsing
+    new_na_count <- sum(is.na(numeric_vector))
+    if (new_na_count > raw_na_count) {
+      warning(paste0(
+        "Variable '", num_var, "' contained non-numeric text strings (e.g., 'ND', '<LOD', or blanks) ",
+        "which have been automatically forced to NA values."
+      ))
+    }
+  } else {
+    warning(paste("Configured numeric variable not found in dataset columns:", num_var))
+  }
+}
+all_target_cols <- c(categ_env_variables, numeric_env_variables)
+#-----------------------------------------------------------------------------
+# Extract ONLY target metadata columns into a fresh table
+linda_metadata <- metadata_correct_format[, all_target_cols]
+# Optional check the structure of the final metadata object 
+str(linda_metadata)
+
+
+#------------------------------------------------------------------------------------------------------------------
+# Setting up the model
+config <- yaml::read_yaml(config_path)
 # --- 2. MODEL SETUP ---
 l_mod <- config$Differential_Abundance$model
 
@@ -621,14 +714,17 @@ l_mod <- config$Differential_Abundance$model
 linda_formula_string <- paste(l_mod$formula, collapse = "")
 
 # Set Reference dynamically
-meta_df[[l_mod$main_var]] <- relevel(factor(meta_df[[l_mod$main_var]]), 
+linda_metadata [[l_mod$main_var]] <- relevel(factor(linda_metadata [[l_mod$main_var]]), 
                                      ref = l_mod$ref_group)
+
+# 3. Ensure your random intercept is strictly classified as a factor
+linda_metadata$CW_number_MF_number <- factor(linda_metadata$CW_number_MF_number)
 
 # --- 3. RUN LINDA ---
 l_params <- config$Differential_Abundance$params
 linda_res <- linda(
   feature.dat     = otu_tab, 
-  meta.dat        = meta_df, 
+  meta.dat        = linda_metadata, 
   formula         = linda_formula_string,
   feature.dat.type = "count",
   prev.filter     = l_params$prev_filter,
@@ -639,8 +735,8 @@ linda_res <- linda(
   alpha           = l_params$alpha,
   p.adj.method    = l_params$p_adj_method
 )
-
 # From this linda output you can plot multiple things
+
 ```
 
 # Plotting the Linda results
@@ -652,9 +748,52 @@ Now if we are interested in how the bacteria differ in log fold changes with res
 
 There is the possibility: "Groundwater_levelbelow:SUM.PAHs..EPA." which will indicate how the taxa 'respond to PAH levels below groundwater level' but the interaction term changes the interpretation greatly. So be carefull with the interpretation.
 ```{r plot LinDA results, fig.width=config$Differential_Abundance$plotting$fig_width, fig.height=config$Differential_Abundance$plotting$fig_height}
+config <- yaml::read_yaml(config_path)
 # Define which effect to visualize from Config
 var_to_plot <- config$Differential_Abundance$plotting$var_to_plot
 
+log_fold_cutoff_plotting <- "1"
+
+colour_positive <- "#17becf"
+
+colour_negative <- "#f8766d"
+## dodgerblue4, firebrick4
+### 17becf, #f8766d
+### DARK : #0a0d36
+names(linda_res$output)
+#>  names(linda_res$output)
+# [1] "time_continuous"                                   "sample_depth_information0.60-0.80"                
+#[3] "manganese2_mg_l"                                   "iron2_mg_l"                                       
+#[5] "concentration_BTEX_ug_l"                           "phosphorus_total"                                 
+#[7] "time_continuous:sample_depth_information0.60-0.80"
+
+var_to_plot <- "sulfate_mg_l"
 # Run the plotting script
 source(config$scripts$linda_plot)
 ```
+
+
+Small chunk of code to test which models are the best 
+```{r}
+# Calculate your overall Aitchison (Euclidean on CLR) distance matrix
+distance_matrix <- vegdist(t(otu_table(mibi_bmr_clr)), method = "euclidean")
+
+# Model 1: Additive formula (No Interaction)
+permanova_additive <- adonis2(distance_matrix ~ time_continuous + sample_depth_information + 
+                              electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow + concentration_BTEX_ug_l + phosphorus_total, 
+                              data = linda_metadata, permutations = 999)
+
+print(permanova_additive)
+# Model 2: Interaction formula (Time * Depth)
+permanova_interaction <- adonis2(distance_matrix ~ time_continuous * sample_depth_information + 
+                                 electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow + concentration_BTEX_ug_l +phosphorus_total, 
+                                 data = linda_metadata, permutations = 999)
+print(permanova_interaction)
+
+
+```
+
+
+
+
+

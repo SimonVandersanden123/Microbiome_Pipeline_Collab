@@ -14,7 +14,7 @@ pc2_var <- round(pca_summary[2, 2] * 100, 1) # Proportion Explained for PC2
 
 
 # Merge sample coords with metadata for plotting
-metadata_df <- as(sample_data(ps_beta_input), "data.frame")
+metadata_df <- metadata_complete
 samp_coords$SampleID <- rownames(samp_coords)
 metadata_df$SampleID <- rownames(metadata_df)
 ordination_df <- merge(samp_coords, metadata_df, by = "SampleID")
@@ -23,12 +23,20 @@ max_point_limit <- max(abs(c(ordination_df$Dim1, ordination_df$Dim2)))
 
 # 2. Environmental Fitting (Significant Arrows Only)
 # -------------------------------
-env_data <- metadata_df %>%
-  dplyr::select(dplyr::all_of(numeric_env_variables)) %>%
-  mutate(across(everything(), function(x) as.numeric(as.character(x))))
+# Select both numeric and categorical variables from your clean table
+env_data_pre <- metadata_df %>%
+  dplyr::select(dplyr::all_of(c(numeric_env_variables, categ_env_variables)))
+# Match the rows of env_data to match your ordination object perfectly
+ord_sample_ids <- rownames(samp_coords) 
+# Filter and re-order env_data to exactly match the ordination rows
+env_data <- env_data_pre[ord_sample_ids, , drop = FALSE]
 
-# PCA objects work directly in envfit
+env_data <- metadata_df %>%
+  dplyr::select(dplyr::all_of(c(numeric_env_variables, categ_env_variables)))
+
+# Now you can pass your original, un-mutated ord_beta object!
 enfit_env <- vegan::envfit(ord_beta, env_data, permutations = 999, na.rm = TRUE)
+
 
 # Auto-scale environmental arrows relative to the data spread
 env_coords <- as.data.frame(vegan::scores(enfit_env, "vectors")) 
@@ -39,7 +47,7 @@ permanova_df <- as.data.frame(permanova_marginal) %>%
   tibble::rownames_to_column("Variable")
 # Identify variables where p-value is strictly less than 0.05
 sig_permanova_vars <- permanova_df %>%
-  filter(`Pr(>F)` < 0.01) %>%
+  filter(`Pr(>F)` < 0.05) %>%
   pull(Variable)
 # Track dropped variables for the reporting console output
 dropped_vars <- setdiff(permanova_df$Variable, sig_permanova_vars)
@@ -47,7 +55,7 @@ dropped_vars <- setdiff(permanova_df$Variable, sig_permanova_vars)
 sig_env_arrows <- env_coords[env_coords$Variable %in% sig_permanova_vars, ]
 
 cat(sprintf(
-  "\n[Environmental Vector Filter Report (p < 0.01)]:\n - Total input variables : %d\n - Vectors RETAINED     : %d (%s)\n - Vectors DROPPED      : %d (%s)\n\n",
+  "\n[Environmental Vector Filter Report (p < 0.05)]:\n - Total input variables : %d\n - Vectors RETAINED     : %d (%s)\n - Vectors DROPPED      : %d (%s)\n\n",
   nrow(permanova_df),
   length(sig_permanova_vars),
   paste(sig_permanova_vars, collapse = ", "),
@@ -75,6 +83,43 @@ top_taxa_arrows <- taxa_coords %>%
   arrange(desc(r2)) %>%
   head(top_asv_n)
 
+# --- NEW: Extract and Filter Categorical Centroids ---
+env_centroids <- data.frame()
+
+if (!is.null(enfit_env$factors)) {
+  # Extract centroid coordinates from envfit object
+  raw_centroids <- as.data.frame(vegan::scores(enfit_env, "factors"))
+  
+  if (nrow(raw_centroids) > 0) {
+    raw_centroids$Level <- rownames(raw_centroids)
+    colnames(raw_centroids)[1:2] <- c("Dim1", "Dim2")
+    
+    # envfit stores factor names combined with their levels (e.g., "timepointTime1")
+    # This loop maps them back to your significant PERMANOVA variables
+    raw_centroids$Variable <- NA
+    for (var in sig_permanova_vars) {
+      matches <- grepl(paste0("^", var), raw_centroids$Level)
+      if (any(matches)) {
+        raw_centroids$Variable[matches] <- var
+      }
+    }
+    
+    # Keep only centroids belonging to globally significant PERMANOVA variables
+    sig_env_centroids <- raw_centroids %>% dplyr::filter(!is.na(Variable))
+    
+    # Clean up the labels so they display nicely (e.g., stripping the variable name prefix)
+    # Example: "timepointPhase_1" becomes "Phase_1"
+    if (nrow(sig_env_centroids) > 0) {
+      sig_env_centroids$Clean_Label <- sapply(1:nrow(sig_env_centroids), function(i) {
+        gsub(paste0("^", sig_env_centroids$Variable[i]), "", sig_env_centroids$Level[i])
+      })
+      
+      # Note: Centroids do NOT get multiplied by a scale factor because they represent
+      # true, absolute sample coordinates. They stay exactly where the samples are.
+      env_centroids <- sig_env_centroids
+    }
+  }
+}
 
 # --- OPTIONAL FILTERING LAYER based on prevalence and abundance---
 if (filter_taxon_loadings) {
@@ -144,7 +189,23 @@ if (nrow(sig_env_arrows) > 0) {
     geom_text_repel(data = sig_env_arrows, aes(x = Dim1, y = Dim2, label = Variable),
                     color = "black", size = 4, fontface = "bold", inherit.aes = FALSE, box.padding = 0.3)
 }
-
+# 3b. NEW: Add Significant Factor Centroids (Represented as Text Labels)
+if (nrow(env_centroids) > 0) {
+  p_beta_PCA <- p_beta_PCA +
+    # Draw a distinct background label for the center of each group
+    geom_label_repel(data = env_centroids, 
+                     aes(x = Dim1, y = Dim2, label = Clean_Label),
+                     color = "black", 
+                     fill = "white",
+                     size = 3.5, 
+                     fontface = "bold.italic", 
+                     alpha = 0.9,
+                     inherit.aes = FALSE, 
+                     box.padding = 0.4,
+                     label.padding = 0.2,
+                     segment.color = "grey50", # line pointing from centroid to label if crowded
+                     segment.size = 0.4)
+}
 # 4. Taxa Arrows (Blue) - Unchanged
 if (nrow(top_taxa_arrows) > 0) {
   p_beta_PCA <- p_beta_PCA +

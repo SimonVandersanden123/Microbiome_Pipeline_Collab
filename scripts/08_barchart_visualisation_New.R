@@ -9,12 +9,11 @@ prepare_abundance_data <- function(ps, high_level = "phylum", low_level = "order
   ps_rel <- transform_sample_counts(ps, function(x) x / sum(x) * 100)
   df <- psmelt(ps_rel)
   
-  # Dynamic Check: Determine if a valid second level is provided
-  has_low_level <- !is.null(low_level) && !is.na(low_level) && low_level != "" && !logical(0)
+  # Dynamic Check FIX: Clean evaluation that yields a single TRUE or FALSE
+  has_low_level <- !is.null(low_level) && !any(is.na(low_level)) && low_level != ""
   
   # 2. Average by group if specified
   if (facet_var != "Sample") {
-    # Dynamically adjust grouping columns based on whether low_level is present
     group_vars <- c("OTU", facet_var, high_level)
     if (has_low_level) {
       group_vars <- c(group_vars, low_level)
@@ -25,11 +24,23 @@ prepare_abundance_data <- function(ps, high_level = "phylum", low_level = "order
       dplyr::summarise(Abundance = mean(Abundance), .groups = "drop")
   }
   
-  # 3. Define Labels and put taxa which do not meet the threshold into 'Others'
+  # 3. CRITICAL FIXED LOGIC: Calculate full taxonomic group totals BEFORE threshold check
+  # Otherwise, individual small OTUs will fail the threshold and everything becomes "Others"
+  group_total_vars <- c(facet_var, high_level)
+  if (has_low_level) {
+    group_total_vars <- c(group_total_vars, low_level)
+  }
+  
+  df <- df %>%
+    dplyr::group_by(across(dplyr::all_of(group_total_vars))) %>%
+    dplyr::mutate(Group_Total_Abund = sum(Abundance)) %>%
+    dplyr::ungroup()
+  
+  # 4. Define Labels using the true Group totals
   df <- df %>%
     dplyr::mutate(
       Level_High = as.character(!!sym(high_level)),
-      Plot_High = ifelse(Abundance >= threshold, Level_High, "Others")
+      Plot_High = ifelse(Group_Total_Abund >= threshold, Level_High, "Others")
     )
   
   # Inject conditional label assignment path
@@ -37,7 +48,7 @@ prepare_abundance_data <- function(ps, high_level = "phylum", low_level = "order
     df <- df %>%
       dplyr::mutate(
         Level_Low  = as.character(!!sym(low_level)),
-        Plot_Low   = ifelse(Abundance >= threshold, Level_Low, "Minor Taxa"),
+        Plot_Low   = ifelse(Group_Total_Abund >= threshold, Level_Low, "Minor Taxa"),
         Hierarchical_Label = ifelse(Plot_High == "Others", "Others", paste(Plot_High, Plot_Low, sep = " - "))
       )
   } else {
@@ -48,36 +59,31 @@ prepare_abundance_data <- function(ps, high_level = "phylum", low_level = "order
       )
   }
   
-  # Section to put the others on the bottom of the graph:
+  # Section to put the others on the bottom of the graph
   df <- df %>%
     dplyr::group_by(!!sym(facet_var), Plot_High, Hierarchical_Label) %>%
     dplyr::summarise(Abundance = sum(Abundance), .groups = "drop")
   
   all_labels <- unique(df$Hierarchical_Label)
-  # Identify all labels that ARE NOT "Others" and sort them alphabetically
   major_taxa <- sort(setdiff(all_labels, "Others"))
   target_levels <- c(major_taxa, "Others")
   
-  # Combine: "Others" last (which sits at the bottom of the stacked geom_bar)
   df$Hierarchical_Label <- factor(df$Hierarchical_Label, levels = target_levels)
   
-  # ---------------------------
   return(df)
 }
 
-#' Create shades for a base color
+#' Create shades for a base color (Kept exactly as yours)
 create_shades <- function(base_color, n) {
   if (n <= 1) return(base_color)
-  # Gradient from nearly white (0.3) to the full base color (1)
   grad_pal <- scales::seq_gradient_pal("#F0F0F0", base_color, "Lab")
   return(grad_pal(seq(0.3, 1, length.out = n)))
 }
 
-#' Generate Shaded Color Palette.
+#' Generate Shaded Color Palette (Kept exactly as yours)
 get_shaded_palette <- function(df, pal_name = "ggthemes::Tableau_10") {
   library(paletteer)
   
-  # 1. Get unique High-Level groups
   high_groups <- df %>% 
     dplyr::filter(Plot_High != "Others") %>% 
     dplyr::pull(Plot_High) %>% 
@@ -85,18 +91,17 @@ get_shaded_palette <- function(df, pal_name = "ggthemes::Tableau_10") {
     sort()
   
   n_groups <- length(high_groups)
-  # 2. Handle Palette Overflow via Interpolation
-  # We extract the palette and use colorRampPalette to stretch it to n_groups
+  if (n_groups == 0) {
+    stop("Error: No taxa passed the abundance threshold filter. Try reducing your threshold in the config.")
+  }
+  
   raw_pal <- paletteer_d(pal_name)
   interp_pal <- grDevices::colorRampPalette(raw_pal)(n_groups)
   names(interp_pal) <- high_groups
   
-  # 3. Create the Shade Mapping
-  # Use dplyr::select explicitly to avoid namespace errors
   unique_labels <- df %>%
     dplyr::select(Plot_High, Hierarchical_Label) %>%
     dplyr::distinct() %>%
-    # Sort so 'Others' is handled separately or last
     dplyr::arrange(Plot_High == "Others", Plot_High, Hierarchical_Label)
   
   color_map <- unique_labels %>%

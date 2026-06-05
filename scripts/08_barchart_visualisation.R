@@ -1,6 +1,6 @@
 # 08_barchart_visualisation.R
 #' Prepare data for Relative Abundance Plots
-prepare_abundance_data <- function(ps, high_level = "phylum", low_level = "order", 
+prepare_abundance_data <- function(ps, high_level = "phylum", low_level = "order",
                                    facet_var = "Sample", threshold = 1) {
   
   # 1. Transform and Melt
