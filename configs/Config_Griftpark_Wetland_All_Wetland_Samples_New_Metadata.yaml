@@ -10,7 +10,7 @@
 
 project_metadata:
   name: "Griftpark Soilcore Analysis"
-  author: "Simon"
+  author: "Simon Vandersanden"
 
 paths:
   phyloseq_rds: "data/ps_taxid.final_with_tree.rds"
@@ -56,8 +56,8 @@ variance_filtering:
 
 subsetting:
   use_subset: true
-  column_name: "Wetland_Sample"
-  target_value: "Wetland"
+  column_name: "CW_number_MF_number"
+  target_value: "CW_3_MF05"
 
 ### 3.0 Community barcharts parameters
 Barplot_specific:
