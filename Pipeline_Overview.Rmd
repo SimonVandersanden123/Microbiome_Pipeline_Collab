@@ -794,6 +794,125 @@ print(permanova_interaction)
 ```
 
 
+#Snowflake plots 
+
+# Snowflake visualisation 
+```{r}
+devtools::load_all("scripts/Snowflake")
+
+Object_For_Snowflake <-ps_work
+
+#generate the microbiome composition object:
+# You can define a specific beta divesity metric to later use to colour in the source nodes:unifrac 
+MCG_Snowflake<- build_mc_graph(ps_object = Object_For_Snowflake, beta_dist = "wunifrac")
+
+
+
+forceGraph(graph_object = MCG_Snowflake)
+forceGraph(graph_object = MCG_Snowflake, target_color = "genus", colorTargetNodes)
+
+help(forceGraph)
+set.seed(12)
+forceGraph(graph_object = MCG_Snowflake, source_color = "alphaObserved", target_color = "abundance", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+
+forceGraph(graph_object = MCG_Snowflake, source_color = "alphaObserved", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+###
+```
+```{r}
+set.seed(12)
+# Colour in the source nodes with information with regard to the alfa diversity
+forceGraph(graph_object = MCG_Snowflake, source_color = "alphaObserved", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+# Colour in the source nodes with information with regard to the beta diversity ordination (bray curtis in this case)
+forceGraph(graph_object = MCG_Snowflake, source_color = "beta", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+# Colour in the source nodes by setting a specific variable as the grouping varriable
+temp_mcg$nodes$group <- temp_mcg$nodes$Group4
+
+# Make sure to include both the groupingVariable = "group", source_color = "group" arguments, otherwise it won't work
+
+forceGraph(graph_object = temp_mcg, groupingVariable = "group", source_color = "group", target_color = "observedIn", nodeTitle = c("group","id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+
+```
+
+
+```{r}
+devtools::load_all("scripts/Snowflake")
+set.seed(12)
+Object_For_Snowflake <-ps_work
+# 1. Build the graph object normally
+MCG_Snowflake<- build_mc_graph(ps_object = Object_For_Snowflake, beta_dist = "wunifrac")
+#Add a grouping varriable for plotting
+MCG_Snowflake$nodes$group <- MCG_Snowflake$nodes$Group4
+library(htmltools)
+# Define your save path
+save_path <- "results/Snowflake_Results"
+if (!dir.exists(save_path)) dir.create(save_path, recursive = TRUE)
+#Different ways of filtering out the 'Target Genera'
+        # 1. Filter for genera found in > 1 sample
+        multi_sample_nodes <- MCG_Snowflake$nodes[
+          !is.na(MCG_Snowflake$nodes$genus) & MCG_Snowflake$nodes$observedIn > 6, 
+        ]
+        target_genera <- names(sort(table(multi_sample_nodes$genus), decreasing = TRUE))
+        # 2. Filter for genera found in a certain abundance cutoff
+        abudant_genera_nodes <- MCG_Snowflake$nodes[
+          !is.na(MCG_Snowflake$nodes$genus) & MCG_Snowflake$nodes$abundance > 0.001, 
+        ]
+        target_genera <- names(sort(table(abudant_genera_nodes$genus), decreasing = TRUE))
+
+# 3. Create the Grid HTML 
+# We remove the background and shadows to keep the immage clean for editing
+grid_items <- lapply(target_genera, function(g_name) {
+  highlight_vector <- c("p1","p2","p3","p4","p5", g_name)
+  
+  p <- forceGraph(
+    graph_object = MCG_Snowflake,
+    target_color = highlight_vector,groupingVariable = "group", source_color = "group",
+    nodeTitle = c("id", "abundance", "genus", "Sample_NAME")
+  )
+  tags$div(
+    style = "display: inline-flex; 
+             flex-direction: column; 
+             align-items: left; 
+             justify-content: center; 
+             width: 44%; 
+             margin: 1%; 
+             vertical-align: top;
+             horizonatal-align: left;
+             background: white; position: relative;",
+    tags$h4(g_name, style = "font-family: sans-serif; text-align: center;align-items: center"),
+    p
+  )
+})
+
+html_grid <- tags$div(
+  style = "width: 1800px; background: grey;align-items: center",
+  tagList(grid_items)
+)
+
+# 4. Save Temp HTML
+temp_html <- file.path(save_path, "temp_for_svg.html")
+save_html(html_grid, temp_html)
+
+# 5. Export to png
+# webshot2 uses Chromium to render the page and can export directly to SVG
+webshot(
+  url = temp_html,
+  file = file.path(save_path, "Snowflake_Final_Figure.png"),
+  vwidth = 1750,
+  vheight = 1600, delay = 5
+)
+
+message("PNG Figure saved to: ", file.path(save_path, "Snowflake_Final_Figure.png"))
+
+```
+
+
+
+
 
 
 
