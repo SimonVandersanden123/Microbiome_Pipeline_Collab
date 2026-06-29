@@ -24,7 +24,7 @@ config <- yaml::read_yaml(config_path)
 
 ## Loading in the necessary libraries for basic handeling
 
-```{r}
+```{r, results= 'hide'}
 library(phyloseq)
 library(dplyr)
 library(picante)    # For Phylogenetic Diversity
@@ -121,20 +121,6 @@ source(config$scripts$filtering)
 # Resulting object 'mibi_phylo_object_filt' is now ready
 ```
 
-## 2.1:Data Pre-processing: Filtering based on variance OPTIONAL, !!!This is not working yet!!!Also this should not be used for alpha or beta diversity, However it might be usefull before differential abundance analysis
-```{r}
-# --- Variance parameters: PULLED FROM CONFIG ---
-variance_cutoff <- config$variance_filtering$cutoff
-variance_filter_switch <- as.numeric(config$variance_filtering$apply_filter)
-
-# Run the background script
-# Note: This script uses mibi_phylo_object_filt
-source(config$scripts$variance)
-
-# The resulting object 'mibi_phylo_object_filt' is now updated
-#This script starts with mibi_phylo_object_filt and updates it with this filtering 
-# The resulting object 'mibi_phylo_object_filt' is now updated
-```
 
 ## 2.1:Data Pre-processing: Sample removal or subset selection
 If you have a large dataset or are interested in specific samples, here you can select which samples or groups of samples you want to take a closer look at.
@@ -170,7 +156,7 @@ if (config$subsetting$use_subset) {
 # OR the full dataset (if no subsetting was applied in the previous chunk).
 ps_work <- mibi_phylo_object_subset
 #Change the sample names to logical names
-sample_names(ps_work) <- ps_work@sam_data$Sample_Names
+sample_names(ps_work) <- ps_work@sam_data$sample_names
 # --- Reporting: Final Object Overview ---
 # 1. Get the total counts
 n_samples <- nsamples(ps_work)
@@ -261,7 +247,7 @@ sample_data(mibi_tss) <- mibi_meta_table_new
 sample_data(mibi_pseudo_clr) <- mibi_meta_table_new
 sample_data(mibi_bmr_clr) <- mibi_meta_table_new
 
-# Remane them again for interpretation:  Change the samples names, so they are based on the sample names:
+# Rename them again for interpretation:  Change the samples names, so they are based on the sample names:
 sample_names(ps_work) <- ps_work@sam_data$sample_names
 sample_names(mibi_tss) <- mibi_tss@sam_data$sample_names
 sample_names(mibi_pseudo_clr) <- mibi_pseudo_clr@sam_data$sample_names
@@ -269,12 +255,12 @@ sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$sample_names
 
 
 ### Make subsets in ps_work per Constructed wetland for specific analysis:
-barchart_target   <- "CW_2"
+barchart_target   <- "CW_3"
 barchart_target_col <- "CW_number"
 # Professional trick: use 'get' to find the column name dynamically from the string in YAML
 ps_work <- subset_samples(ps_work, get(barchart_target_col) == barchart_target)
 mibi_bmr_clr <- subset_samples(mibi_bmr_clr, get(barchart_target_col) == barchart_target)
-
+mibi_tss <- subset_samples(mibi_tss, get(barchart_target_col) == barchart_target)
 
 
 ```
@@ -328,7 +314,7 @@ Relative_Abundance_Plot <- ggplot(data_for_plot, aes(x = !!sym(v_glob$facet_var)
 Relative_Abundance_Plot
 
 # Save output using config values for naming
-ggsave(paste0("results/Relative_Abundance_Plot_", v_glob$high_level, "_", v_glob$low_level, ".png"), 
+ggsave(paste0("results/CW_3/Relative_Abundance_Plot_", v_glob$high_level, "_", v_glob$low_level, ".png"), 
        plot = Relative_Abundance_Plot, width = v_glob$fig_width, height = v_glob$fig_height, dpi = v_glob$dpi)
 ```
 
@@ -437,7 +423,6 @@ if (config$Alpha_Diversity$plotting$selected_metrics == "all") {
 # Automatically apply the ordering to the Color column if found in alpha_output
 #if (plot_color_by %in% colnames(alpha_output)) {
 #  alpha_output[[plot_color_by]] <- factor(alpha_output[[plot_color_by]], levels = desired_order)
-}
 # --- 4. RUN PLOTTING SCRIPT ---
 
 source(config$scripts$alpha_plot)
@@ -483,7 +468,6 @@ source(config$scripts$beta_vis_basic)
 
 plot(p_beta)
 ```
-
 ## 5.2 Advanced Ordination: Environmental Correlation PCA variant
 
 #In this section, we upgrade the ordination by mapping environmental variables (vectors) and group shapes (hulls) onto the microbial landscape.
@@ -506,12 +490,13 @@ labels           <- config$Beta_Diversity$labels
 numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
 categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables
 top_asv_n                      <- config$Beta_Diversity$advanced$top_asv_n
-target_level                   <- config$Beta_Diversity$advanced$target_tax_level
+target_level                   <- config$Beta_Diversity$advanced$target_level
 filter_taxon_loadings          <- isTRUE(config$Beta_Diversity$advanced$filter_taxon_loadings)
 filter_taxon_abundance_filter  <- config$Beta_Diversity$advanced$filter_taxon_abundance_filter
-filter_taxon_prevalence_filter <- config$Beta_Diversity$advanced$filter_taxon_prevalence_filter 
+filter_taxon_min_samples <- config$Beta_Diversity$advanced$filter_taxon_min_samples
 arrow_reduction_taxa           <- config$Beta_Diversity$advanced$pca_arrow_taxa
 arrow_reduction_env            <- config$Beta_Diversity$advanced$pca_arrow_env
+arrow_env_permanova_significance <- 0.20
 
 # --- 2. EXECUTION ---
 source(config$scripts$beta_calc)
@@ -535,26 +520,32 @@ show_labels      <- isTRUE(config$Beta_Diversity$show_labels)
 labels           <- config$Beta_Diversity$labels
 # Advanced parameters (PCoA specific scaling)
 numerical_env_vars            <- config$Beta_Diversity$advanced$numerical_env_vars
+numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
 categorical_env_vars          <- config$Beta_Diversity$advanced$categorical_env_vars
+
+numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
+categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables
 top_asv_n            <- config$Beta_Diversity$advanced$top_asv_n
-target_level         <- "class" # Or pull from config
+target_level             <- config$Beta_Diversity$advanced$target_level
 arrow_reduction_taxa <- config$Beta_Diversity$advanced$pcoa_arrow_taxa
 arrow_reduction_env  <- config$Beta_Diversity$advanced$pcoa_arrow_env
+fig_width <- config$Beta_Diversity$fig_width
+fig_height <- config$Beta_Diversity$fig_height
 
 # --- 2. EXECUTION ---
 source(config$scripts$beta_calc)
 
 #Customisation before plotting :
-desired_order <- c( "INF","EFF", "MF1", "MF2", "MF5", "MF6", "MF9", "MF10") # Change this based on the variables used for plotting
+#desired_order <- c( "INF","EFF", "MF1", "MF2", "MF5", "MF6", "MF9", "MF10") # Change this based on the variables used for plotting
 # Check if shape_var column exists in the phyloseq metadata and refactor it
-if (shape_var %in% colnames(phyloseq::sample_data(ps_beta_input))) {
-  # 1. Pull the metadata out
-  meta_tmp <- data.frame(phyloseq::sample_data(ps_beta_input))
-  # 2. Convert your target column to the ordered factor
-  meta_tmp[[shape_var]] <- factor(meta_tmp[[shape_var]], levels = desired_order)
-  # 3. Put it right back into the active phyloseq object
-  phyloseq::sample_data(ps_beta_input) <- phyloseq::sample_data(meta_tmp)
-}
+#if (shape_var %in% colnames(phyloseq::sample_data(ps_beta_input))) {
+#  # 1. Pull the metadata out
+#  meta_tmp <- data.frame(phyloseq::sample_data(ps_beta_input))
+#  # 2. Convert your target column to the ordered factor
+#  meta_tmp[[shape_var]] <- factor(meta_tmp[[shape_var]], levels = desired_order)
+#  # 3. Put it right back into the active phyloseq object
+#  phyloseq::sample_data(ps_beta_input) <- phyloseq::sample_data(meta_tmp)
+#}
 
 source(config$scripts$beta_vis_pcoa)
 
@@ -632,7 +623,7 @@ target_level_linda <- config$Differential_Abundance$target_level
 # they you get information on how mayor groups of bacteria respond to the specified model, 
 # otherwise raw sequences will be given.
 #-----------------------------------------------------------------------------------------
-#ps_glommed <- phyloseq::tax_glom(ps_work, taxrank = target_level_linda, NArm = TRUE) 
+ps_glommed <- phyloseq::tax_glom(ps_work, taxrank = target_level_linda, NArm = TRUE) 
 #----------------------------------------------------------------------------------------
 #In this step all ASVs which have the same taxonomic level will be agglomerated.
 # For plotting we need to change the sequences in the OTU table to a specific taxonomic label otherwise raw sequences will be visible on the plot.
@@ -752,7 +743,7 @@ config <- yaml::read_yaml(config_path)
 # Define which effect to visualize from Config
 var_to_plot <- config$Differential_Abundance$plotting$var_to_plot
 
-log_fold_cutoff_plotting <- "1"
+log_fold_cutoff_plotting <- "0.5"
 
 colour_positive <- "#17becf"
 
@@ -767,14 +758,15 @@ names(linda_res$output)
 #[5] "concentration_BTEX_ug_l"                           "phosphorus_total"                                 
 #[7] "time_continuous:sample_depth_information0.60-0.80"
 
-var_to_plot <- "sulfate_mg_l"
+var_to_plot <- "CW_number_MF_numberCW_3_MF05"
 # Run the plotting script
 source(config$scripts$linda_plot)
 ```
 
 
 Small chunk of code to test which models are the best 
-```{r}
+```{r, }
+
 # Calculate your overall Aitchison (Euclidean on CLR) distance matrix
 distance_matrix <- vegdist(t(otu_table(mibi_bmr_clr)), method = "euclidean")
 
@@ -792,8 +784,210 @@ print(permanova_interaction)
 
 
 ```
+Chunk of code to for tax4fun_object_generation, this step takes time so run once per dataset and then load in the objects during the analysis
+```{r, results= 'hide'}
+config <- yaml::read_yaml(config_path)
+#This is what we need to specify for the analyis:
+# modify the following 8 lines as needed
+query_otu_seq   = 'tax4fun2/mibi_pipeline_otus.fasta'       # input OTU sequence file, this is generated in the .R script based on the ps_work phyloseq object
+query_otu_table = 'tax4fun2/mibi_pipeline_otu_table.txt'    # input OTU table, this is generated in the .R script
+pwd_op_folder   = 'tax4fun2/Tax4Fun2_output_folder'      # output directory
+pwd_ref_data    = 'tax4fun2/Tax4Fun2_ReferenceData_v2'   # path to the default database (i.e., Tax4Fun2_ReferenceData_v2), need to be decompressed before use, this was normally done during the instalation process.
+norm_by_cn      = TRUE                          # normalize_by_copy_number (TRUE or FALSE)
+norm_path       = TRUE                          # normalize_pathways (TRUE or FALSE)
+iden            = 0.97                          # min_identity_to_reference, please modify as needed
+num_of_threads  = 2                             # number of CPU cores to use, please modify as needed
+source(config$scripts$tax4fun_object_generation)
+```
+Load in the data previously generated, analyse and make the figures
+```{r, results= 'hide'}
+# 1. Set paths to your generated output files
+pathway_file <- "tax4fun2/Tax4Fun2_output_folder/pathway_prediction.txt"
+ko_file      <- "tax4fun2/Tax4Fun2_output_folder/functional_prediction.txt"
+
+# 2. Read the files into R (skipping the first comment row if Tax4Fun2 includes one)
+# Note: check if row 1 is a header or comment; usually Tax4Fun2 uses standard tab tables.
+pathway_data <- read.delim(pathway_file, header = TRUE, row.names = 1, check.names = FALSE)
+ko_data      <- read.delim(ko_file, header = TRUE, row.names = 1, check.names = FALSE)
+# Transpose the data, inorder to maintain a good structure with rows: samples, collumns= functions
+pathway_transposed <- t(pathway_data)
+head(pathway_transposed)
+
+# 2. Extract the level3 row to use as our filtering key, (Converting it to character to prevent factor variable glitches), this will be used in the next chunk for filtering)
+level_3_labels <- as.character(pathway_transposed["level3", ])
+names(level_3_labels) <- colnames(pathway_data)
+level_2_labels <- as.character(pathway_transposed["level2", ])
+names(level_2_labels) <- colnames(pathway_data)
+
+# 1. Define the categories you want to throw away, here you get an overview of the available options:
+unique(level_3_labels)
+table(level_3_labels)
+unique(level_2_labels)
+table(level_2_labels)
+
+# 1. Define the exact categories you WANT to keep in this case we use level_2_to_filter
+# (Check the output of unique(level_3_labels) to make sure spelling matches perfectly!)
+#wanted_categories_level_3 <- c("Metabolism", "Genetic Information Processing", "Environmental Information Processing")
+wanted_categories_level_2 <- c("Xenobiotics biodegradation and metabolism","Biosynthesis of other secondary metabolites","Energy metabolism","Metabolism of cofactors and vitamins","Lipid metabolism","Carbohydrate metabolism","Membrane transport","Excretory system")
+wanted_categories_level_2 <- c(
+  "Xenobiotics biodegradation and metabolism", # <--- HERE IS YOUR PAH/BIOREMEDIATION DEGRADATION!
+  "Energy metabolism",                         # <--- HERE IS YOUR METHANE/SULFUR/NITROGEN ANAEROBIC RESPIRATION!
+  "Environmental adaptation",                  # Stress responses to anaerobic/toxic conditions
+  "Cellular community - prokaryotes"           # Biofilm formation in the wetland substrate
+)
+
+#Filter the transpored pathway table, to only maintain the collumns of interest:
+pathway_transposed <- t(pathway_data)
+# 2. Find which columns (pathway IDs) satisfy BOTH of your inclusion rules
+#keep_columns <- which(level_3_labels %in% wanted_categories_level_3)
+keep_columns <- which(level_2_labels %in% wanted_categories_level_2)
+
+# 3. Filter your transposed matrix columns directly
+# (This preserves the level1, level2, level3 annotation rows at the bottom)
+filtered_pathway_transposed <- pathway_transposed[, keep_columns]
+```
+Now we have filtered out the pathways of interest, now we can go to data analysis and plotting. 
+```{r}
+str(filtered_pathway_transposed)
+#first give me a very easy way to plot these results so I can get a general feel for the data 
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+# 1. Isolate biological samples from hierarchical character rows
+sample_rows  <- setdiff(rownames(filtered_pathway_transposed), c("level1", "level2", "level3"))
+# HERE you choose the labels which will be assinged to the specific KOs
+#KO_names_for_plotting <- as.character(filtered_pathway_transposed["level2", ])
+KO_names_for_plotting <- as.character(filtered_pathway_transposed["level1", ])
+
+# 2. Extract and strictly force the numbers to be numeric (Matrix conversion trick)
+raw_numeric_part <- filtered_pathway_transposed[sample_rows, ]
+clean_numeric_matrix <- as.data.frame(matrix(
+  as.numeric(as.matrix(raw_numeric_part)), 
+  nrow = nrow(raw_numeric_part), 
+  ncol = ncol(raw_numeric_part)
+))
+rownames(clean_numeric_matrix) <- rownames(raw_numeric_part)
+colnames(clean_numeric_matrix) <- colnames(raw_numeric_part)
+
+# 3. Transpose the pure numbers and attach their Level 2 grouping categories
+transposed_df <- as.data.frame(t(clean_numeric_matrix))
+transposed_df$Level2_Category <- KO_names_for_plotting
+
+# 4. Aggregate pathways by their Level 2 metadata groups using dplyr
+long_df <- transposed_df %>%
+  tidyr::pivot_longer(cols = -Level2_Category, names_to = "SampleID", values_to = "Abundance") %>%
+  dplyr::group_by(SampleID, Level2_Category) %>%
+  dplyr::summarise(Total_Abundance = sum(Abundance, na.rm = TRUE), .groups = "drop")
+
+# 5. Extract metadata from your phyloseq object and merge
+metadata_df <- as(sample_data(ps_work), "data.frame")
+metadata_df$SampleID <- rownames(metadata_df)
+
+plot_overview_df <- merge(long_df, metadata_df, by = "SampleID")
+# 6. Generate the Plot!
+ggplot(plot_overview_df, aes(x = short_name, y = Total_Abundance, fill = Level2_Category)) +
+  geom_col(position = "fill", width = 0.7) + 
+  scale_fill_viridis_d(option = "plasma") +   
+  theme_bw() +
+  labs(
+    title = "Macro-Level Functional Profile Overview",
+    subtitle = "Aggregated by Level 2 KEGG Categories",
+    x = "Sample Depth Information",
+    y = "Relative Proportion of Predicted Functions",
+    fill = "Metabolic Sectors"
+  ) +
+  theme(
+    text = element_text(size = 12),
+    plot.title = element_text(face = "bold", hjust = 0.5),
+    plot.subtitle = element_text(hjust = 0.5),
+    legend.position = "right",
+    axis.text.x = element_text(angle = 45, hjust = 1) 
+  )
+```
+Now that we have the data we want, we are going to put it into a format which can be added to the metadata file
+```{r}
+#We are going to stepwisely deconstruct and format the table into a suitable format for copy pasting it into the metadata for the phyloseq 
+# Here we aim to extract the information and add it to the phyloseq metadata
+# 1. Separate the 54 biological samples from the 3 hierarchical character rows
+sample_rows  <- setdiff(rownames(filtered_pathway_transposed), c("level1", "level2", "level3"))
+level1_names <- as.character(filtered_pathway_transposed["level1", ])
+level2_names <- as.character(filtered_pathway_transposed["level2", ])
+level3_names <- as.character(filtered_pathway_transposed["level3", ])
+ko_numbers   <- colnames(filtered_pathway_transposed)
+# 2. Extract and convert the text matrix part into a true numeric matrix
+raw_numeric_part     <- filtered_pathway_transposed[sample_rows, ]
+clean_numeric_matrix <- matrix(as.numeric(raw_numeric_part), 
+                               nrow = nrow(raw_numeric_part), 
+                               ncol = ncol(raw_numeric_part))
+rownames(clean_numeric_matrix) <- rownames(raw_numeric_part)
+colnames(clean_numeric_matrix) <- colnames(raw_numeric_part)
+# 3. Create a clean map framework connecting KO to all its hierarchical levels
+hierarchy_map <- data.frame(
+  KO_Number = ko_numbers,
+  Level1    = level1_names,
+  Level2    = level2_names,
+  Level3    = level3_names,
+  stringsAsFactors = FALSE
+)
+# 4. Convert the matrix to long format, join with our hierarchy map descriptions
+functional_long <- as.data.frame(t(clean_numeric_matrix)) %>%
+  tibble::rownames_to_column("KO_Number") %>%
+  tidyr::pivot_longer(cols = -KO_Number, names_to = "SampleID", values_to = "Count") %>%
+  dplyr::left_join(hierarchy_map, by = "KO_Number")
+
+# 5. Create a descriptive, unique column name combining Level information and KO ID
+# This prevents R from creating duplicate column headers during the widening step
+functional_long <- functional_long %>%
+  dplyr::mutate(Pathway_Column_Header = paste(Level1, KO_Number, sep = " - "))
+
+# 6. Pivot the table wide so that Rows = Samples, and Columns = Your specific functions!
+functional_wide_metadata <- functional_long %>%
+  dplyr::select(SampleID, Pathway_Column_Header, Count) %>%
+  tidyr::pivot_wider(names_from = Pathway_Column_Header, values_from = Count) %>%
+  as.data.frame()
+
+rownames(functional_wide_metadata) <- functional_wide_metadata$SampleID
 
 
+# 7. Fix the strange dots R adds to the names of the columns
+# This converts any sequence of multiple periods generated by R back into a clean " - " separator
+colnames(functional_wide_metadata) <- gsub("\\.+", " - ", colnames(functional_wide_metadata))
+# Trim off any accidental trailing dashes or dots from the column edges
+colnames(functional_wide_metadata) <- gsub(" - $", "", colnames(functional_wide_metadata))
+
+# 1. Pull the original metadata dataframe from your phyloseq object
+metadata_df          <- as(sample_data(ps_work), "data.frame")
+metadata_df$SampleID <- rownames(metadata_df)
+
+# 2. Extract only the first 10 columns for easy viewing
+# We use unique() to make sure 'SampleID' is included even if it wasn't in the first 10 columns originally
+columns_to_keep         <- unique(c(colnames(metadata_df)[1:10], "SampleID"))
+metadata_pre_copy_paste <- metadata_df[, columns_to_keep, drop = FALSE]
+#Fix the sample order before merging:
+pls sort my metadata_pre_copy_paste based on its 'order_treatment' collumn, but now good, not with the standart 11 filtering, just from1 then 2 then 3
+
+# 3. Merge the compact metadata with your functional columns, in the right collumn using the left join function
+metadata_to_copy_paste <- metadata_pre_copy_paste %>%
+  dplyr::left_join(functional_wide_metadata, by = "SampleID")
+
+# Optional: Put SampleID as the very first column for easy Excel copy-pasting
+metadata_to_copy_paste <- metadata_to_copy_paste[, c("SampleID", setdiff(colnames(metadata_to_copy_paste), "SampleID"))]
+
+
+# 4. Create an output directory if it doesn't exist, and write out the file
+if(!dir.exists("results/all_wetlands/")) {
+  dir.create("results/all_wetlands/", recursive = TRUE)
+}
+
+# 5. Write the tab-separated file safely (Using the correct backslash \t)
+write.table(metadata_to_copy_paste, 
+            sep = "\t",
+            file = "results/all_wetlands/Extended_Functional_Respiration_Metadata.tsv", 
+            row.names = FALSE,
+            quote = TRUE)
+
+#Now you can add this table to your microbiome dataset for additional analysis
+```
 
 
 

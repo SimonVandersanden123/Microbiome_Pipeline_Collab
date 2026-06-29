@@ -47,7 +47,7 @@ permanova_df <- as.data.frame(permanova_marginal) %>%
   tibble::rownames_to_column("Variable")
 # Identify variables where p-value is strictly less than 0.05
 sig_permanova_vars <- permanova_df %>%
-  filter(`Pr(>F)` < 0.05) %>%
+  filter(`Pr(>F)` < arrow_env_permanova_significance) %>%
   pull(Variable)
 # Track dropped variables for the reporting console output
 dropped_vars <- setdiff(permanova_df$Variable, sig_permanova_vars)
@@ -77,10 +77,10 @@ tax_table_df <- as.data.frame(tax_table(ps_beta_input))
 # Scale down taxa arrows (0.3 reduction like your PCoA)
 taxa_coords$Taxon_Label <- tax_table_df[[target_level]]
 taxa_coords$Taxon_Label[is.na(taxa_coords$Taxon_Label)] <- rownames(taxa_coords)[is.na(taxa_coords$Taxon_Label)]
-taxa_coords$r2 <- sqrt(taxa_coords$Dim1^2 + taxa_coords$Dim2^2)
+taxa_coords$strength_of_taxon_loading <- sqrt(taxa_coords$Dim1^2 + taxa_coords$Dim2^2)
 total_initial_taxa <- nrow(taxa_coords)
 top_taxa_arrows <- taxa_coords %>%
-  arrange(desc(r2)) %>%
+  arrange(desc(strength_of_taxon_loading)) %>%
   head(top_asv_n)
 
 # --- NEW: Extract and Filter Categorical Centroids ---
@@ -130,9 +130,22 @@ if (filter_taxon_loadings) {
   # 3. Calculate True Sample Metrics
   asv_means      <- rowMeans(otu_filter_mat)
   asv_prevalences <- rowSums(otu_filter_mat > 0) / ncol(otu_filter_mat)
-  # 4. Filter based on your custom YAML configurations
+  # 4. Filter the ASVs based on prevalance based on your custom YAML configurations
+  
+  # 1. Get the total number of samples
+  n_samples <- nrow(metadata_complete)
+  
+  # 2. Get your threshold from config (e.g., 3)
+  min_sample_count <- config$Beta_Diversity$advanced$filter_taxon_min_samples
+  
+  # 3. Calculate the prevalence threshold as a fraction
+  # This turns "3" into "3/n_samples" (e.g., 3/40 = 0.075)
+  calculated_prevalence_filter <- min_sample_count / n_samples
+  
+  # 4. Use this in your filtering logic
   keep_asvs <- names(asv_means[asv_means >= filter_taxon_abundance_filter & 
-                                 asv_prevalences >= filter_taxon_prevalence_filter])
+                                 asv_prevalences >= calculated_prevalence_filter])
+  
   # 5. Subset your taxa coordinates dataframe
   taxa_coords_filtered <- taxa_coords[rownames(taxa_coords) %in% keep_asvs, ]
   # Print an overview of the filtering
@@ -152,9 +165,9 @@ if (filter_taxon_loadings) {
  
 }
 # --- CALCULATE LENGTHS & EXTRACT TOP ASVS ---
-taxa_coords_filtered$r2 <- sqrt(taxa_coords_filtered$Dim1^2 + taxa_coords_filtered$Dim2^2)
+taxa_coords_filtered$strength_of_taxon_loading <- sqrt(taxa_coords_filtered$Dim1^2 + taxa_coords_filtered$Dim2^2)
 top_taxa_arrows <- taxa_coords_filtered %>%
-  arrange(desc(r2)) %>%
+  arrange(desc(strength_of_taxon_loading)) %>%
   head(top_asv_n)
 
 if (nrow(top_taxa_arrows) > 0) {
@@ -178,9 +191,9 @@ p_beta_PCA <- ggplot(ordination_df, aes(x = Dim1, y = Dim2,
 # 2. CONDITIONAL: Add Grouping Ellipses
 if (show_ellipses) {
   p_beta_PCA <- p_beta_PCA + 
-    stat_ellipse(aes(group = .data[[group_clustering]]), geom = "polygon", alpha = 0.1, level = 0.95, linewidth = 0.2)
+    stat_ellipse(aes(group = .data[[group_clustering]], colour = .data[[group_clustering]], fill = .data[[group_clustering]]), geom = "polygon", alpha = 0.1, type= "norm", level = 0.95, linewidth = 0.2)
 }
-
+help(ggplot2)
 # 3. Environmental Arrows (Black) - Unchanged
 if (nrow(sig_env_arrows) > 0) {
   p_beta_PCA <- p_beta_PCA +
@@ -246,5 +259,5 @@ p_beta_PCA <- p_beta_PCA +
   )
 
 # 5. Save Output
-ggsave(paste0("results/PCA_Upgraded_", beta_metric, ".png"), p_beta_PCA, width = 12, height = 8, dpi = 300)
+ggsave(paste0("results/all_wetlands/PCA_Upgraded_", beta_metric, ".png"), p_beta_PCA, width = 12, height = 8, dpi = 300)
 message("Upgraded PCA plot generated.")

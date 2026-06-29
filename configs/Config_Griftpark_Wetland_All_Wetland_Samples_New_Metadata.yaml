@@ -36,6 +36,8 @@ scripts:
   # LinDA analysis
   linda_prepare: "scripts/06_preparing_object_for_Linda.R"
   linda_plot: "scripts/06_differential_abundance_LinDA.R"
+  #Tax4Fun analysis
+  tax4fun_object_generation: "scripts/09_Tax4Fun_object_generation.R"
 
 ### Parameters used to prepare the dataset before analysis and figure generation.
 analysis_params:
@@ -55,8 +57,8 @@ variance_filtering:
   apply_filter: true 
 
 subsetting:
-  use_subset: true
-  column_name: "Wetland_Sample"
+  use_subset: false
+  column_name: "wetland_sample"
   target_value: "Wetland"
 
 ### 3.0 Community barcharts parameters
@@ -106,12 +108,12 @@ Alpha_Diversity:
 ### 5.0 Beta Diversity: Community Trait Analysis
 Beta_Diversity:
   # Global Plotting Settings
-  color_var: "Nanobubbles_On" #Sample_depth_information
+  color_var: "sample_depth_information" #Sample_depth_information
   shape_var: "sample_depth_information"
-  show_ellipses: false
+  show_ellipses: true
   show_labels: true
   labels: "timepoint_MF_number" #Timepoint
-  group_clustering: "sample_names"
+  group_clustering: "sample_depth_information"
   
   fig_width: 12
   fig_height: 8
