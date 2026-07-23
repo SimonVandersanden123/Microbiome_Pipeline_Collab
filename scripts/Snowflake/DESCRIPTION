@@ -1,0 +1,12 @@
+Package: snowflake
+Type: Package
+Title: Visualising Microbiome Abundance Tables as Multivariate Bipartite Graphs
+Version: 0.1.1
+Author: Jannes Peeters
+Maintainer: Jannes Peeters <jannes.peeters+snowflake@uhasselt.be>
+Description: Visualizes Microbiome Abundance Tables using Multivariate Bipartite Graphs and Adjacency tables.
+Imports: phyloseq, stats, vegan, seriation, htmlwidgets, jsonlite, crosstalk 
+License: MIT License
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.2.3
