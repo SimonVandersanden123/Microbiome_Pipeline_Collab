@@ -14,7 +14,7 @@ project_metadata:
 
 paths:
   phyloseq_rds: "data/ps_taxid.final_with_tree.rds"
-  metadata_txt: "data/Wetland_Recalculated_Metadata_Subselection_Analysis.txt"
+  metadata_txt: "data/Wetland_Recalculated_Metadata_Subselection_Analysis_With_TAX4FUN_DATA.txt"
 
 scripts:
   #Preprocessing
@@ -37,7 +37,9 @@ scripts:
   linda_prepare: "scripts/06_preparing_object_for_Linda.R"
   linda_plot: "scripts/06_differential_abundance_LinDA.R"
   #Tax4Fun analysis
-  tax4fun_object_generation: "scripts/09_Tax4Fun_object_generation.R"
+  tax4fun_object_generation: "scripts/09_1_Tax4Fun_object_generation.R"
+  tax4fun_object_filtering: "scripts/09_2_Tax4Fun_object_filtering.R"
+  tax4fun_object_metadata_generation: "scripts/09_3_Metadata_formatting_generation.R"
 
 ### Parameters used to prepare the dataset before analysis and figure generation.
 analysis_params:
@@ -57,7 +59,7 @@ variance_filtering:
   apply_filter: true 
 
 subsetting:
-  use_subset: false
+  use_subset: true
   column_name: "wetland_sample"
   target_value: "Wetland"
 
@@ -126,13 +128,13 @@ Beta_Diversity:
   # Section 5.2 & 5.3: Advanced (Vectors/Environmental Fit)
   advanced:
     numeric_env_variables: ["concentration_BTEX_ug_l", "phosphorus_total", "redoxpot", "pH", "EGV3", "naphthalene_PAH_ug_l", "iron2_TOTAL_mmoles_e_l__sulfate_relative_to_1D_flow", "sulfate_consumption_1D_flow_mmols_e_l_no_negatives", "manganese2_electron_acceptor_capacity_mmol_e_l",
-    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_influent"] #["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
+    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_influent", "Benzoate_degradation_ko00362", "Xylene_degradation_ko00622", "Toluene_degradation_ko00623", "Polycyclic_aromatic_hydrocarbon_degradation_ko00624", "Naphthalene_degradation_ko00626", "Methane_metabolism_ko00680", "Carbon_fixation_pathways_in_prokaryotes_ko00720", "Sulfur_metabolism_ko00920", "Metabolism_of_xenobiotics_by_cytochrome_P450_ko00980" ] #["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
     categ_env_variables: ["timepoint", "sample_depth_information", "electron_balance_1D_flow", "dominant_electron_acceptor_species_1D_flow"] # ["Timepoint", "Sample_depth_information", "CW_Number"]
-    top_asv_n: 20
+    top_asv_n: 0
     target_tax_level: "family"
     filter_taxon_loadings: true
-    filter_taxon_abundance_filter: 0.005
-    filter_taxon_prevalence_filter: 0.0001 #roughly equates to being found in at least 6 different samples
+    filter_taxon_abundance_filter: 0.005 # the minimum relative abundance of the taxa you want to have
+    filter_taxon_prevalence_filter: 3 # in how many different samples does the taxon need to be present?
     # Scaling for PCA
     pca_arrow_taxa: 1
     pca_arrow_env: 2

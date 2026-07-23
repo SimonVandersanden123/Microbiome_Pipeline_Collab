@@ -15,7 +15,7 @@ library(Tax4Fun2)
 setwd("C:/Users/lucp12540/Documents/GitHub/Microbiome_Pipeline_Collab/tax4fun2")
 # Force the package to download the official native Windows BLAST binaries
 buildDependencies(
-  path_to_reference_data = "tax4fun2/Tax4Fun2_ReferenceData_v2", 
+  path_to_reference_data = "Tax4Fun2_ReferenceData_v2", 
   install_suggested_packages = TRUE, 
   use_force = TRUE
 )
@@ -23,18 +23,10 @@ buildDependencies(
 # 1. Point R to your exact active workspace folder
 setwd("C:/Users/lucp12540/Documents/GitHub/Microbiome_Pipeline_Collab")
 
-# 2. Extract the archive right inside the reference folder
-untar(
-  tarfile = "tax4fun2/Tax4Fun2_ReferenceData_v2/ncbi-blast-2.9.0.tar.gz",
-  exdir = "tax4fun2/Tax4Fun2_ReferenceData_v2"
-)
-
 # 3. Rename the extracted folder to 'blast_bin' so Tax4Fun2 can find 'blastn.exe'
 file.rename(
   from = "tax4fun2/Tax4Fun2_ReferenceData_v2/ncbi-blast-2.9.0+", 
   to = "tax4fun2/Tax4Fun2_ReferenceData_v2/blast_bin"
 )
 
-# Check if everything inside this folder is valid and ready
-testReferenceData(path_to_reference_data = "./Tax4Fun2_ReferenceData_v2")
 ```

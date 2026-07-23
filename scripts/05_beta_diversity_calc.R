@@ -38,6 +38,7 @@ all_target_vars <- c(numeric_env_variables, categ_env_variables)
 
 # 1. Create a temporary matrix strictly to find complete cases (no NAs)
 # We force numeric columns here so that text values like "missing" turn to NA and get dropped
+# Here we need to watch out for . instead of , in the metadata
 temp_check <- metadata %>%
   dplyr::select(dplyr::all_of(all_target_vars)) %>%
   mutate(across(dplyr::all_of(numeric_env_variables), function(x) as.numeric(as.character(x))))
@@ -92,7 +93,7 @@ structural_rows <- as.data.frame(permanova_marginal) %>%
   filter(Variable %in% c("Residual", "Total"))
 
 permanova_final_table <- bind_rows(permanova_sorted, structural_rows)
-
+beta_p_val <- permanova_final_table$`Pr(>F)`[1]
 # 5. Print your beautifully ordered table!
 print(permanova_final_table, row.names = FALSE)
 
@@ -112,29 +113,28 @@ if (!is.null(config$Beta_Diversity$specified_permanova_formula) &&
   # Run adonis2 with by = "terms"
   permanova_terms <- adonis2(formula_beta_terms, data = metadata_complete, by = "terms", permutations = 999)
   
-  # [Your existing code to sort and print permanova_terms goes here]
+  #Now clean up the results before printing the output
+  # 1. Convert the PERMANOVA object to a clean, sortable dataframe
+  permanova_sorted_terms <- as.data.frame(permanova_terms) %>%
+    tibble::rownames_to_column("Variable") %>%
+    # 2. Separate your actual variables from the Residual and Total rows
+    filter(!Variable %in% c("Residual", "Total")) %>%
+    # 3. Sort by R2 in descending order (highest on top)
+    arrange(desc(R2))
   
-} else 
+  # 4. Bind the Residual and Total rows back to the bottom so the math remains intact
+  structural_rows_terms <- as.data.frame(permanova_terms) %>%
+    tibble::rownames_to_column("Variable") %>%
+    filter(Variable %in% c("Residual", "Total"))
+  # 5. Print your beautifully ordered table!
+  print(permanova_terms_final_table, row.names = FALSE)
+  
+  # Extract p-value for the plot title later
+  beta_p_val <- permanova_sorted_terms$`Pr(>F)`[1]
+  
+  permanova_terms_final_table <- bind_rows(permanova_sorted_terms, structural_rows_terms)
+} else {
   message("No specific PERMANOVA formula provided in config. Skipping sequential analysis.")
+}
 
-#Now clean up the results before printing the output
-# 1. Convert the PERMANOVA object to a clean, sortable dataframe
-permanova_sorted_terms <- as.data.frame(permanova_terms) %>%
-  tibble::rownames_to_column("Variable") %>%
-  # 2. Separate your actual variables from the Residual and Total rows
-  filter(!Variable %in% c("Residual", "Total")) %>%
-  # 3. Sort by R2 in descending order (highest on top)
-  arrange(desc(R2))
 
-# 4. Bind the Residual and Total rows back to the bottom so the math remains intact
-structural_rows_terms <- as.data.frame(permanova_terms) %>%
-  tibble::rownames_to_column("Variable") %>%
-  filter(Variable %in% c("Residual", "Total"))
-
-permanova_terms_final_table <- bind_rows(permanova_sorted_terms, structural_rows_terms)
-
-# 5. Print your beautifully ordered table!
-print(permanova_terms_final_table, row.names = FALSE)
-
-# Extract p-value for the plot title later
-beta_p_val <- permanova_sorted_terms$`Pr(>F)`[1]

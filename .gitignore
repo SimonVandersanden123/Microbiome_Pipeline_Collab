@@ -6,3 +6,5 @@ results/*
 !results/.gitkeep
 # ignore the reference database so it does not get updated into the github
 tax4fun2/Tax4Fun2_ReferenceData_v2/KEGG/prokaryotes.dmnd
+# ignore the help folder which is full of mental notes and usefull information
+theory_behind_some_things

@@ -19,6 +19,7 @@ if (!exists("params") || is.null(params$config_file)) {
   config_path <- params$config_file
 }
 config <- yaml::read_yaml(config_path)
+# This is the lasted up to date config file:Config_Griftpark_Wetland_All_Wetland_Samples_New_Metadata.yaml
 ```
 
 
@@ -38,6 +39,7 @@ library(scales)
 library(paletteer)
 library(stringr)
 library(yaml)
+library(NetCoMi)
 set.seed(99)
 ```
 
@@ -207,7 +209,6 @@ saveRDS(mibi_tss, file = "Objects_Generated_In_Pipeline/mibi_tss_All_Wetland_Sam
 saveRDS(mibi_pseudo_clr, file = "Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Wetland_Samples.rds")
 saveRDS(mibi_bmr_clr, file = "Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Wetland_Samples.rds")
 saveRDS(ps_work, file = "Objects_Generated_In_Pipeline/ps_work_All_Wetland_Samples.rds")
-
 ```
 
 ###The script generates three primary objects. Choosing the right one depends on your specific analysis:
@@ -235,6 +236,11 @@ mibi_tss <- readRDS("Objects_Generated_In_Pipeline/mibi_tss_All_Wetland_Samples.
 mibi_pseudo_clr <-readRDS("Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Wetland_Samples.rds") 
 mibi_bmr_clr <- readRDS("Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Wetland_Samples.rds") 
 ps_work <- readRDS("Objects_Generated_In_Pipeline/ps_work_All_Wetland_Samples.rds") 
+# Load in the previously saved and normalized objects all samples included
+#mibi_tss <- readRDS("Objects_Generated_In_Pipeline/mibi_tss_All_Samples.rds") 
+#mibi_pseudo_clr <-readRDS("Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Samples.rds") 
+#mibi_bmr_clr <- readRDS("Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Samples.rds") 
+#ps_work <- readRDS("Objects_Generated_In_Pipeline/ps_work_All_Samples.rds") 
 
 # Change the samples names, so they match with the metadata formatting
 sample_names(ps_work) <- ps_work@sam_data$Sample_ID
@@ -255,8 +261,8 @@ sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$sample_names
 
 
 ### Make subsets in ps_work per Constructed wetland for specific analysis:
-barchart_target   <- "CW_3"
-barchart_target_col <- "CW_number"
+barchart_target   <- "Wetland" #
+barchart_target_col <- "wetland_sample" #
 # Professional trick: use 'get' to find the column name dynamically from the string in YAML
 ps_work <- subset_samples(ps_work, get(barchart_target_col) == barchart_target)
 mibi_bmr_clr <- subset_samples(mibi_bmr_clr, get(barchart_target_col) == barchart_target)
@@ -490,13 +496,13 @@ labels           <- config$Beta_Diversity$labels
 numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
 categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables
 top_asv_n                      <- config$Beta_Diversity$advanced$top_asv_n
-target_level                   <- config$Beta_Diversity$advanced$target_level
+target_level                   <- config$Beta_Diversity$advanced$target_tax_level
 filter_taxon_loadings          <- isTRUE(config$Beta_Diversity$advanced$filter_taxon_loadings)
 filter_taxon_abundance_filter  <- config$Beta_Diversity$advanced$filter_taxon_abundance_filter
-filter_taxon_min_samples <- config$Beta_Diversity$advanced$filter_taxon_min_samples
+filter_taxon_prevalence_filter <- config$Beta_Diversity$advanced$filter_taxon_prevalence_filter
 arrow_reduction_taxa           <- config$Beta_Diversity$advanced$pca_arrow_taxa
 arrow_reduction_env            <- config$Beta_Diversity$advanced$pca_arrow_env
-arrow_env_permanova_significance <- 0.20
+arrow_env_permanova_significance <- 0.05
 
 # --- 2. EXECUTION ---
 source(config$scripts$beta_calc)
@@ -526,7 +532,7 @@ categorical_env_vars          <- config$Beta_Diversity$advanced$categorical_env_
 numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
 categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables
 top_asv_n            <- config$Beta_Diversity$advanced$top_asv_n
-target_level             <- config$Beta_Diversity$advanced$target_level
+target_level             <- config$Beta_Diversity$advanced$target_tax_level
 arrow_reduction_taxa <- config$Beta_Diversity$advanced$pcoa_arrow_taxa
 arrow_reduction_env  <- config$Beta_Diversity$advanced$pcoa_arrow_env
 fig_width <- config$Beta_Diversity$fig_width
@@ -597,11 +603,6 @@ ggplot() +
         axis.title = element_text(face = "bold", size = 11),
         legend.title = element_text(face = "bold"),
         legend.position = "right")
-
-
-
-
-
 
 
 
@@ -784,6 +785,606 @@ print(permanova_interaction)
 
 
 ```
+
+# 8.1 Microbial network analysis: Filtering of the phyloseq objectgeneration of the network object.
+```{r}
+library(NetCoMi)
+# =====================================================================
+# 1. Selection and filtering of the phyloseq object to use for network selection
+# =====================================================================
+# =====================================================================
+# First: Select the phyloseq object choose the original filtered for interest data table with no prior normalisation. because the function itself allows for multiple normalisation methods internally
+# =====================================================================
+ps_network_analysis <- ps_work
+## 1. Get the names of the first 5 samples
+#first_50_samples <- sample_names(ps_network_analysis)[1:162]
+## 2. Subset the phyloseq object
+#ps_debug <- subset_samples(ps_network_analysis, sample_names(ps_network_analysis) %in% first_50_samples)
+#
+#
+#
+#ps_debug # with this the pipeline can be tested/debugged
+#otu_debug <- as(otu_table(ps_debug), "matrix")
+#
+## Agglomerate to genus level
+#ps_debug_genus <- tax_glom(ps_debug, taxrank = "genus")
+#
+## Rename taxonomic table and make genus unique, Because the taxonomic level which you want to use to make the networks, must be unique.
+#ps_debug_genus_renamed <- renameTaxa(ps_debug_genus, 
+#                                  pat = "<name>", 
+#                                  substPat = "<name>_<subst_name>(<subst_R>)",
+#                                  numDupli = "genus")
+##Save this object for later network construction
+#saveRDS(ps_debug_genus_renamed, file = #"Objects_Generated_In_Pipeline/Network_Analysis/ps_network_analysis_Genus_renamed_wetland_samples.rds")
+# =====================================================================
+# Load in the previously generated network analysis object with renamed genus,...
+# =====================================================================
+ps_debug_genus_renamed <- readRDS("Objects_Generated_In_Pipeline/Network_Analysis/ps_network_analysis_Genus_renamed_wetland_samples.rds")
+# =====================================================================
+# 2. Subsetting and filtering
+# ====================================================================
+ps_debug_genus_renamed_selection <- subset_samples(ps_debug_genus_renamed, timepoint %in% c("T0","T1","T2","T3"))
+
+ps_debug_genus_renamed_selection_2layer_filtering <- subset_samples(ps_debug_genus_renamed_selection, CW_number %in% c("CW_2"))
+#Rename it after you do the two layer filtering :
+ps_debug_genus_renamed_selection <- ps_debug_genus_renamed_selection_2layer_filtering
+#ps_debug_genus_renamed_selection <- subset_samples(ps_debug_genus_renamed, timepoint %in% c("T1", "T2", "T3"))
+#ps_object_for_network_analysis <-ps_debug_genus_renamed_selection  # incase you don't want to do further filtering
+# =====================================================================
+# Further filtering for the network analysis, prevalence 
+# =====================================================================
+# Keep only genera that are present in at least 25% of your samples 
+
+prevalence_threshold <- 0.25 * nsamples(ps_debug_genus_renamed_selection)
+core_genera <- taxa_names(filter_taxa(ps_debug_genus_renamed_selection, function(x) sum(x > 0) >= prevalence_threshold, TRUE))
+# Create a temporary phyloseq object with only your widespread taxa, this is 
+ps_prevalence_filtered <- prune_taxa(core_genera, ps_debug_genus_renamed_selection)
+# here you select the object which will be used for the network analysis
+ps_object_for_network_analysis <- ps_prevalence_filtered
+
+```
+
+# Network construction step:
+```{r}
+# =====================================================================
+# =====================================================================
+# Network construction step, there are multiple ways of constructing the network: 
+# =====================================================================
+# =====================================================================
+# There are 3 main ways of associating the taxa of interest:
+# Correlation, proportionality and conditional dependence
+# From each of these measures, there are also different ways of data filtering, zero handling and normalization methods.
+# I have included one section for each one of these major association methods to generate the networks, since the choice of association has a great impact on the structure of the final network.
+### Specific parameters customisation is mentioned in the 'help' files associated with the function, for some important parameters, short information is included in the current script.
+                                       # help("netConstruct")
+# An important one which is important for the visualisation: dissFunc: there are multple measures to calculate the dissimilarity between the different taxa which will determine the position of the taxa within the final visualisation. And therefore also the interpretation or intuition of the resulting network. 
+    #-**unsigned**: leading to low distance between strongly **associated** taxa (both positively associated as well as negatively associated) 
+  #-**signed:** where the distance between the nodes is highest for strongly negative associated taxa. (default)
+  #-**SignedPos,** signed distance with setting negative assocations to zero.
+  #-There is also TOMdiss: dissimilarity measure available  based on the topological overlap matrix (TOM), instead of looking at the relationships between the taxa in isolation, it evaluates the shared neighborhood context. (if taxa share a lot of the same neighbors, they will be closer to one another)
+# =====================================================================
+# Correlation based methods
+# =====================================================================
+# We start off with Correlation, since this is the most intuitive and 'straight forward method:
+  ## Correlation-based networks represent co-occurrence patterns (marginal associations) rather than direct biological   interactions. In these networks, if Taxon A and Taxon B both thrive in the same environmental niche (e.g., sharing a specific depth or pH preference), they will show a strong positive correlation. However, this correlation is often a "ghost" or spurious association driven by a shared environmental confounder rather than a direct relationship.
+
+  ## To identify actual direct relationships, conditional dependence methods (such as SPRING) are used. These methods evaluate whether Taxon A and Taxon B remain associated after conditioning on (controlling for) all other taxa in the dataset (Taxon C,D,...). This statistical control actively filters out indirect paths and shared environmental effects.
+
+## Network Construction using SparCC: For our correlation-based analysis, we utilized SparCC (Sparse Correlations for Compositional data). Traditional correlation metrics (like Pearson or Spearman) yield spurious results on microbiome datasets due to their compositional nature (where relative abundances must sum to 1). SparCC is specifically designed to be compositionally aware, utilizing log-ratio transformations to estimate true correlation coefficients without compositionality bias.
+
+### Here normalisation and zero replacement methods are automatically selected so there is no need to specify it 
+# The correlation based network construction script: 
+
+network_correlation_based <- netConstruct(ps_object_for_network_analysis,  
+                          measure = "sparcc",
+                          #normMethod = "clr", This normalisation method is not needed for sparcc
+                          filtTax = "highestFreq",
+                          group = as.character(phyloseq::sample_data(ps_object_for_network_analysis)$sample_depth_information),
+                          taxRank = "genus",
+                          filtTaxPar = list( highestFreq = 50),
+                          #zeroMethod = "multRepl", This is not needed for sparcc
+                          sparsMethod = "threshold",
+                          thresh = 0.3,
+                          dissFunc = "TOMdiss", # There are different methods for calculating the dissimilarity signed"(default), "unsigned", "signedPos", "TOMdiss"
+                          verbose = 3,seed = 123456)
+
+props_SparCC <- netAnalyze(network_correlation_based, 
+                          clustMethod = "cluster_fast_greedy")
+
+# =====================================================================
+# Conditional dependence based method
+# =====================================================================
+## Conditional Dependence (Direct Relationships): This approach determines if Taxon A and Taxon B are still connected once we statistically account for the rest of the community (Taxon C). It strips away these indirect, environmentally-driven "ghost" connections to reveal the true backbone of the network.
+
+## We do the network constuction using the SPRING, Unlike traditional correlation metrics that yield spurious results on compositional microbiome data (where relative abundances must sum to 1), SPRING is fully compositionally aware.This allows SPRING to estimate a sparse precision matrix representing true conditional independence, successfully distinguishing direct ecological interactions from indirect background noise.
+
+### Here normalisation and zero replacement methods are automatically selected so there is no need to specify it 
+# The conditional dependence based network construction script: 
+network_conditional_dependence_based <- netConstruct(ps_object_for_network_analysis,
+                           #or the prevalence filtered taxa:ps_prevalence_filtered
+                           taxRank = "genus",
+                           filtTax = "highestFreq",
+                           filtTaxPar = list( highestFreq = 50), #select the number of taxa #filtTaxPar = list(highestFreq = 40)
+                           filtSamp = "none",
+                           measure = "spring",
+                           group = as.character(phyloseq::sample_data(ps_object_for_network_analysis)$sample_depth_information),# Here adjust it to the input object, can be used to generate multiple networks
+                           measurePar = list(nlambda=10, 
+                                             rep.num=10,
+                                             Rmethod = "approx"),
+                           dissFunc = "signed", # There are different methods for calculating the dissimilarity signed"(default), "unsigned", "signedPos", "TOMdiss", Signed if you want to look at the direct relationships between the different taxa. TOMdiss, if you want to value the taxon's other connections.
+                           verbose = 2,
+                           seed = 123456)
+library(remotes)
+# =====================================================================
+# Proportionality based method
+# =====================================================================
+#############################
+## Network Construction using Proportionality (rho)
+
+#We construct the microbial networks using **Proportionality (rho)**. Unlike traditional correlation metrics (such as #Pearson or Spearman) that yield spurious (fake) associations on compositional relative abundance data, the #proportionality measure rho is fully compositionally aware and sub-compositionally coherent. It is a symmetric measure #with values scaled between -1 and +1 (where +1 represents perfect positive proportionality), making it directly #comparable to standard correlation coefficients and suitable for standard network topology algorithms.
+
+#### Connection to Pearson Correlation
+#The formula for rho is highly analogous to the classic **Pearson Correlation Coefficient (r)**. 
+#Recall that Pearson's correlation scales covariance using the geometric mean of the variances:
+#r(Ai, Aj) = cov(Ai, Aj) / square_root([var(Ai)]^2 * [var(Aj)]^2)
+#In contrast, proportionality rho scales the relationship using the arithmetic mean of the variances. It is calculated as: rho(log(x_i),log(x_j) = 1 - [ var( log(x_i / x_j) ) / ( var(log(x_i)) + var(log(x_j)) ) ]
+
+#### Breaking Down the Formula Components:
+#
+#* **log(x_i / x_j)**: Takes the logarithm of the ratio of the two taxa. This is mathematically equivalent to the #difference of their logs: log(x_i) - log(x_j). if this log(x_i)- log(y_i) = a constant value, this means that the ratio's of these taxa are roughly equal overall and, then the variance of this term is low.=>
+#* **var( log(x_i / x_j) )**: Calculates the Log-Ratio Variance (VLR). If the ratio between two taxa stays highly consistent across different samples/conditions, this variance will be very close to 0.
+#* **var(log(x_i)) + var(log(x_j))**: Represents the sum of the individual variances of the log-transformed data, acting as a scaling/standardising factor. (Note: In practice, to make this compositionally safe, NetCoMi calculates this using Centered #Log-Ratio (CLR) transformed values).
+#### The Three Core Scenarios for interpreting the rho scores:
+#
+##### 1. Perfect Positive Proportionality (rho = 1)
+#If Taxon x is always for example exactly 3 times more abundant than Taxon y, their ratio x/y is a constant (3). 
+#* The log of a constant is a constant (log(3) is approximately 1.099).
+#* The variance of a constant across samples is 0. Plugging this into the numerator of the formula yields:
+#rho = 1 - [ 0 / (var(log(x)) + var(log(y))) ] = 1 - 0 = 1
+
+##### 2. Complete Independence (rho = 0)
+#If the two genera have absolutely nothing to do with each other, the variance of their difference is simply the sum of their individual variances: 
+#var(log(x) - log(y)) = var(log(x)) + var(log(y))
+#* Under this condition, the numerator becomes identical to the denominator.Therefore the fraction simplifies to 1, yielding:
+#rho = 1 - 1 = 0
+
+##### 3. Perfect Inverse Proportionality (rho = -1)
+#If one taxon increases while the other decreases, their covariance is highly negative. The variance of their difference expands because of the algebraic rule:
+#var(log(x) - log(y)) = var(log(x)) + var(log(y)) - [ 2 * cov(log(x), log(y)) ]
+#* Because covariance is negative, subtracting it becomes addition: - [ 2 * (-covariance) ] = + [ 2 * #absolute_value_of_covariance ]. 
+#* This makes the variance of their difference (the numerator) significantly larger than the sum of their individual  variances (the denominator).
+#* Due to mathematical boundaries, the numerator can never exceed twice the value of the denominator. Thus, the fraction #is capped at 2:
+#rho = 1 - 2 = -1
+#* This lower limit of -1 represents a perfect reciprocal relationship. Because the raw data is first CLR-transformed,  even exponential differences between competing bacteria are successfully projected into this symmetric, linear -1 to +1  space.
+######
+### To achieve this, rho  modifies the log-ratio variance using Centered Log-Ratio (clr) transformed data. This provides a #scaled, robust association metric that is mathematically immune to compositionality bias, allowing us to reconstruct true #co-abundance patterns without the risk of false-positive correlations.
+
+## We do the network constuction using the propr package, which uses clr transformed data
+### Here normalisation and zero replacement methods are automatically selected so there is no need to specify it
+library(propr)
+network_proportionality_based <- netConstruct(ps_object_for_network_analysis, 
+                                            taxRank = "genus", 
+                                            filtTax = "highestFreq", 
+                                            filtTaxPar = list(highestFreq = 50), 
+                                            filtSamp = "none", 
+                                            measure = "propr", 
+                                            group = as.character(phyloseq::sample_data(ps_object_for_network_analysis)$sample_depth_information),
+                                            # --- ADDED THESE TWO LINES TO FIX THE ERROR ---
+                                            sparsMethod = "threshold",
+                                            thresh = 0.6, # Adjust this value (e.g., 0.2 to 0.5) depending on how sparse you want your network
+                                            # ----------------------------------------------
+                                            dissFunc = "signed", # There are different methods for calculating the dissimilarity signed"(default), "unsigned", "signedPos", "TOMdiss"
+                                            verbose = 2, 
+                                            seed = 123456)
+
+```
+Network selection and analysis
+```{r}
+# Here you make the selection of which network you are going to analyse:
+network_to_analyse <- network_proportionality_based #network_correlation_based, network_conditional_dependence_based or network_proportionality_based
+# =====================================================================
+# Now we start with the network analysis, there is a lot that can be done with the generated network
+# =====================================================================
+#Here you can visualize both the association matrix and the similarity matrix
+head(network_to_analyse$edgelist1)
+plotHeat(network_to_analyse$assoMat1, textUpp = "none", textLow = "none", labCex = 0.7) #labCex, to adjust the label size of the matrix
+plotHeat(network_to_analyse$simMat1, textUpp = "none", textLow = "none",labCex = 0.7 )
+
+# In the following function we peform the network analysis:
+# There are numerous ways of analysing the data, pls read the original documentation to see all different methods: https://doi.org/10.1093/bib/bbaa290 
+## Centrality related: centrLCC = TRUE, very well documented in the help(netAnalyze), best left on true,this makes sure that
+## normDeg: default is true, so a normalised version of different centrality values is returned, I keep this out of the customizable parameters, since it is logical and intutive to keep it this way.
+## weightDeg, here you choose wheter the strength of the connections plays a role in the connectivity scores, for examples, do you value if a bacterium is connected with 5 small connections the same as 5 big associations? do you value the weight of the connections? or just the number (intuitivly use weightDeg= TRUE)
+##########
+##centrLCC = FALSE 
+#####
+props_network_to_analyse <- netAnalyze(network_to_analyse, 
+                           centrLCC = TRUE, 
+                           weightDeg = TRUE,
+                           clustMethod = "cluster_fast_greedy",
+                           hubPar = "eigenvector", 
+                           hubQuant = 0.95 # quantile for determing hub nodes, set more stringent if you want fewer 'hub' species
+                           )
+# here you have a large amount of network characteristics 
+summary(props_network_to_analyse, numbNodes = 5L)
+
+# =====================================================================
+# In this part we want to plot the network, here again there are a million ways of plotting the network, dependent on the manner the edges and node positiontioning is done, this can be done on multiple network traits.
+# =====================================================================
+plot_network <- plot(props_network_to_analyse, 
+          labelScale = FALSE,
+          nodeColor = "cluster",  
+          nodeSize = "eigenvector", #"eigenvector"
+          repulsion = 0.5, #0.8, the lower you go 
+          rmSingles = TRUE,
+          cexLables = 1.3,
+          nodeSizeSpread = 3,
+          cexNodes = 2,
+          title1 = "Network on genus level with choosen associations", 
+          showTitle = TRUE,
+          cexTitle = 2.1,
+          cexLabels = 1.5)
+
+legend(0.7, 1.1, cex = 1, title = "estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("#009900","red"), 
+       bty = "n", horiz = TRUE)
+
+
+
+
+```
+# Plotting with phylum information
+```{r}
+network_to_analyse <- network_proportionality_based
+props_network_to_analyse <- netAnalyze(network_to_analyse, 
+                           centrLCC = TRUE, 
+                           weightDeg = TRUE,
+                           clustMethod = "cluster_fast_greedy",
+                           hubPar = "eigenvector", 
+                           hubQuant = 0.95 # quantile for determing hub nodes, set more stringent if you want fewer
+)
+
+                           # Get phyla names
+taxtab_network_analysis <- as(tax_table(ps_object_for_network_analysis), "matrix")
+phyla <- as.factor(gsub("p__", "", taxtab_network_analysis[, "phylum"]))
+print(phyla)
+names(phyla) <- taxtab_network_analysis[, "genus"]
+
+##################################################### When you want to give each phylum a seperate colours ###############
+## 1. Convert phyla to a factor to ensure clean levels
+#phyla_factor <- as.factor(phyla)
+## 2. Count how many unique phyla you actually have
+#num_colors <- nlevels(phyla_factor)
+## 3. Create a color palette with that exact number (e.g., 52)
+#phylcol <- rainbow(num_colors)
+## Colors used in the legend should be equally transparent as in the plot
+#phylcol_transp <- colToTransp(phylcol, 60)
+##Second option: colour them based on the top X phyla:
+###################################################### When you just want to give the top X phyla ##############
+# 1. Convert phyla to a character vector
+phyla_clean <- as.character(phyla)
+
+# 2. Find the top 10 most common phyla
+top_phyla <- names(sort(table(phyla_clean), decreasing = TRUE)[1:10])
+
+# 3. Replace any phylum not in the top 10 with "Other"
+phyla_clean[!(phyla_clean %in% top_phyla)] <- "Other"
+
+# 4. Convert it back to a factor
+phyla_grouped <- as.factor(phyla_clean)
+
+# ==================== THE FIX ====================
+# Assign the original taxon names to your new grouped factor vector
+names(phyla_grouped) <- names(phyla)
+# =================================================
+
+# 5. Define your 11 colors
+#The bright version
+#phylcol <- c(
+#  "cyan", "blue3", "red", "lawngreen", "yellow", "deeppink", 
+#  "darkorange", "purple", "saddlebrown", "turquoise4", "gray60"
+#)
+
+phylcol <- c(
+  "#00A896", # 1. Bright Teal (distinct from blues and greens)
+  "#023E8A", # 2. Deep Royal Blue (strong, dark anchor)
+  "#E63946", # 3. Vibrant Coral-Red (pops instantly)
+  "#40916C", # 4. Emerald Green (rich and organic)
+  "#FFB703", # 5. Bright Amber/Gold (highly visible, warm)
+  "#D81159", # 6. Vivid Raspberry (distinct from red and purple)
+  "#F77F00", # 7. Intense Ochre Orange (strong warmth)
+  "#7209B7", # 8. Deep Electric Purple (royal and distinct)
+  "#6F4E37", # 9. Rich Coffee Brown (neutral anchor)
+  "#00F5D4", # 10. Neon Mint (your high-pop accent color)
+  "#4A5568"  # 11. Slate Gray (clean neutral for minor phyla)
+)
+phylcol_transp <- colToTransp(phylcol, 30)
+# ==================== DRAW THE PLOT ====================
+plot(props_network_to_analyse,
+     layout = "spring",
+     repulsion = 0.4,
+     shortenLabels = "none",
+     charToRm = "g__",
+     labelScale = FALSE,
+     rmSingles = TRUE,
+     nodeSize = "clr", # eigenvector, clr
+     nodeSizeSpread = 4,
+     nodeColor = "feature", 
+     featVecCol = phyla_grouped, 
+     colorVec =  phylcol,
+     posCol = "#2A6F97", # "darkturquoise" or "#2A6F97"
+     negCol = "#FF2400", # "orange"
+     edgeTranspLow = 15,
+     edgeTranspHigh = 40,
+     cexNodes = 1.3,
+     cexLabels = 1.3,
+     cexHubLabels = 1.8,
+     title1 = "Network on genus level with Pearson correlations", 
+     showTitle = TRUE,
+     cexTitle = 2.3)
+# color them on cluster
+plot(props_network_to_analyse,
+     layout = "spring",
+     repulsion = 0.4,
+     shortenLabels = "none",
+     charToRm = "g__",
+     labelScale = FALSE,
+     rmSingles = TRUE,
+     nodeSize = "clr", # eigenvector, clr
+     nodeSizeSpread = 4,
+     nodeColor = "cluster",
+     posCol = "#2A6F97", # "darkturquoise" or "#2A6F97"
+     negCol = "#FF2400", # "orange"
+     edgeTranspLow = 15,
+     edgeTranspHigh = 40,
+     cexNodes = 1.3,
+     cexLabels = 1.3,
+     cexHubLabels = 1.8,
+     title1 = "Network on genus level with Pearson correlations", 
+     showTitle = TRUE,
+     cexTitle = 2.3)
+# ==================== DRAW THE LEGENDS ====================
+
+# Allow plotting slightly into the margins
+par(xpd = TRUE) 
+
+# Phylum Legend: Nudged left (-1.3), up (1.4), and vertically compressed (y.intersp = 0.7)
+legend(-1.3, 1.4, 
+       cex = 0.8,                 # Slightly smaller text to keep it tidy
+       pt.cex = 1.2, 
+       title = "Phylum:",        
+       legend = levels(phyla_grouped), 
+       col = phylcol_transp, 
+       bty = "n", 
+       pch = 16,
+       y.intersp = 0.7)           # Squeezes the 11 items vertically so they don't hit the nodes!
+
+# Association Legend: Nudged right (0.6) and up (1.4) to match the left side
+legend(0.6, 1.4, 
+       cex = 0.8,                 # Kept at 0.8 to match the Phylum legend scale
+       title = "Estimated association:",
+       legend = c("+","-"), 
+       lty = 1, 
+       lwd = 3, 
+       col = c("darkturquoise","orange"), 
+       bty = "n", 
+       horiz = TRUE,
+       x.intersp = 0.8)           # Squeezes the horizontal spacing slightly
+
+# Reset plotting boundaries back to default
+par(xpd = FALSE)
+
+```
+
+Save the plot in a map
+```{r}
+# Now we save the plots: 
+pdf("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_spring.pdf", width = 20, height = 10)
+
+plot(props_network_to_analyse, 
+          labelScale = FALSE,
+          nodeColor = "cluster", 
+          nodeSize = "eigenvector",
+          repulsion = 0.8,
+          rmSingles = TRUE,
+          cexLables = 1.5,
+          nodeSizeSpread = 3,
+          cexNodes = 2,
+          title1 = "Network on genus level with SPRING associations", 
+          showTitle = TRUE,
+          cexTitle = 2.1,
+          cexLabels = 1.5)
+dev.off()
+
+
+```
+
+
+
+
+
+# 8.2 Microbial network analysis: analyzing the generated network
+```{r}
+
+#help("netAnalyze")
+
+
+##########
+
+#summary.microNetProps
+summary(props_spring, numbNodes = 5L)
+p <- plot(props_spring, 
+          labelScale = FALSE,
+          nodeColor = "cluster", 
+          nodeSize = "eigenvector",
+          repulsion = 0.8,
+          rmSingles = TRUE,
+          cexLables = 1.3,
+          nodeSizeSpread = 3,
+          cexNodes = 2,
+          title1 = "Network on genus level with SPRING associations", 
+          showTitle = TRUE,
+          cexTitle = 2.1,
+          cexLabels = 1.5)
+
+legend(0.7, 1.1, cex = 1, title = "estimated association:",
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("#009900","red"), 
+       bty = "n", horiz = TRUE)
+
+
+# Now we save the plots: pls write a script to do this: 
+pdf("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_spring.pdf", width = 20, height = 10)
+
+plot(props_spring, 
+          labelScale = FALSE,
+          nodeColor = "cluster", 
+          nodeSize = "eigenvector",
+          repulsion = 0.8,
+          rmSingles = TRUE,
+          cexLables = 1.5,
+          nodeSizeSpread = 3,
+          cexNodes = 2,
+          title1 = "Network on genus level with SPRING associations", 
+          showTitle = TRUE,
+          cexTitle = 2.1,
+          cexLabels = 1.5)
+
+dev.off()
+
+# 
+
+# For Gephi, we have to generate an edge list with IDs.
+# The corresponding labels (and also further node features) are stored as node list.
+
+# Create edge object from the edge list exported by netConstruct()
+edges <- dplyr::select(net_spring$edgelist1, v1, v2)
+
+# Add Source and Target variables (as IDs)
+edges$Source <- as.numeric(factor(edges$v1))
+edges$Target <- as.numeric(factor(edges$v2))
+edges$Type <- "Undirected"
+edges$Weight <- net_spring$edgelist1$adja
+
+nodes <- unique(edges[,c('v1','Source')])
+colnames(nodes) <- c("Label", "Id")
+
+# Add category with clusters (can be used as node colors in Gephi) Here you can select some node characteristics to take out to make a better plot in gephi
+nodes$Category <- props_spring$clustering$clust1[nodes$Label]
+
+edges <- dplyr::select(edges, Source, Target, Type, Weight)
+
+write.csv(nodes, file = "Objects_Generated_In_Pipeline/Network_Analysis/Exporting_To_Gephi/nodes.csv", row.names = FALSE)
+write.csv(edges, file = "Objects_Generated_In_Pipeline/Network_Analysis/Exporting_To_Gephi/edges.csv", row.names = FALSE)
+
+#Network with Pearson correlation as association measure 
+net_pears <- netConstruct(ps_prevalence_filtered,  
+                          measure = "pearson",
+                          normMethod = "clr",
+                          filtTax = "highestFreq",
+                          group = as.character(phyloseq::sample_data(ps_prevalence_filtered)$sample_depth_information),
+                          taxRank = "genus",
+                          filtTaxPar = list( highestFreq = 50),
+                          zeroMethod = "multRepl",
+                          sparsMethod = "threshold",
+                          thresh = 0.3,
+                          verbose = 3)
+
+props_pears <- netAnalyze(net_pears, 
+                          clustMethod = "cluster_fast_greedy")
+
+
+plot(props_pears, 
+     nodeColor = "cluster", 
+     nodeSize = "eigenvector",
+     repulsion = 0.8,
+     rmSingles = TRUE,
+     labelScale = FALSE,
+     cexLables = 1.3,
+     nodeSizeSpread = 3,
+     cexNodes = 2,
+     title1 = "Network on genus level with Pearson correlations", 
+     showTitle = TRUE,
+     cexTitle = 2.3)
+
+legend(0.7, 1.1, cex = 2.2, title = "estimated correlation:", 
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("#009900","red"), 
+       bty = "n", horiz = TRUE)
+
+
+pdf("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_pearson.pdf", width = 20, height = 10)
+
+plot(props_pears, 
+     nodeColor = "cluster", 
+     nodeSize = "eigenvector",
+     repulsion = 0.8,
+     rmSingles = TRUE,
+     labelScale = FALSE,
+     cexLables = 1.3,
+     nodeSizeSpread = 3,
+     cexNodes = 2,
+     title1 = "Network on genus level with Pearson correlations", 
+     showTitle = TRUE,
+     edgeInvisFilter = "threshold", #if you want to filter out some of the edges, make them invisible
+     edgeInvisPar = 0.5,
+     cexTitle = 2.3)
+
+dev.off()
+
+
+```
+Correlation based networks: SParCC
+```{r}
+
+
+
+plot(props_SparCC, 
+     nodeColor = "cluster", 
+     nodeSize = "eigenvector",
+     repulsion = 0.8,
+     rmSingles = TRUE,
+     labelScale = FALSE,
+     cexLables = 1.3,
+     nodeSizeSpread = 3,
+     cexNodes = 2,
+     title1 = "Network on genus level with Pearson correlations", 
+     showTitle = TRUE,
+     cexTitle = 2.3)
+
+legend(0.7, 1.1, cex = 2.2, title = "estimated correlation:", 
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("#009900","red"), 
+       bty = "n", horiz = TRUE)
+
+
+pdf("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_SparCC.pdf", width = 20, height = 10)
+
+plot(props_SparCC, 
+     nodeColor = "cluster", 
+     nodeSize = "eigenvector",
+     repulsion = 0.8,
+     rmSingles = TRUE,
+     labelScale = FALSE,
+     cexLables = 1.3,
+     nodeSizeSpread = 3,
+     cexNodes = 2,
+     title1 = "Network on genus level with SParCC correlations", 
+     showTitle = TRUE,
+     edgeInvisFilter = "threshold", #if you want to filter out some of the edges, make them invisible
+     edgeInvisPar = 0.5,
+     cexTitle = 2.3)
+
+dev.off()
+
+
+```
+
+
+
+
+
+
+#TAX4FUN Section
+## 7.1 Functional assignment using tax4fun
+### This chunk of code, is used for doing the functional assignment, which is ran in the 09_1_Tax4Fun_object_generation.R script. Run this one time per dataset, since this takes a lot of time 
 Chunk of code to for tax4fun_object_generation, this step takes time so run once per dataset and then load in the objects during the analysis
 ```{r, results= 'hide'}
 config <- yaml::read_yaml(config_path)
@@ -797,70 +1398,46 @@ norm_by_cn      = TRUE                          # normalize_by_copy_number (TRUE
 norm_path       = TRUE                          # normalize_pathways (TRUE or FALSE)
 iden            = 0.97                          # min_identity_to_reference, please modify as needed
 num_of_threads  = 2                             # number of CPU cores to use, please modify as needed
-source(config$scripts$tax4fun_object_generation)
+#when you want to run the analysis, uncheck this #
+#source(config$scripts$tax4fun_object_generation)
 ```
-Load in the data previously generated, analyse and make the figures
+## 7.2 Filtering out the KO's of interest for further analysis
+### This chunk of code, you can take out the information generated by the tax4fun function. And select in which collumns you are interested in, this filters the Kegg orthology pathways you are interested in, which in the end can be linked as data to your phyloseq data.
 ```{r, results= 'hide'}
+config <- yaml::read_yaml(config_path)
 # 1. Set paths to your generated output files
 pathway_file <- "tax4fun2/Tax4Fun2_output_folder/pathway_prediction.txt"
 ko_file      <- "tax4fun2/Tax4Fun2_output_folder/functional_prediction.txt"
 
-# 2. Read the files into R (skipping the first comment row if Tax4Fun2 includes one)
-# Note: check if row 1 is a header or comment; usually Tax4Fun2 uses standard tab tables.
-pathway_data <- read.delim(pathway_file, header = TRUE, row.names = 1, check.names = FALSE)
-ko_data      <- read.delim(ko_file, header = TRUE, row.names = 1, check.names = FALSE)
-# Transpose the data, inorder to maintain a good structure with rows: samples, collumns= functions
-pathway_transposed <- t(pathway_data)
-head(pathway_transposed)
-
-# 2. Extract the level3 row to use as our filtering key, (Converting it to character to prevent factor variable glitches), this will be used in the next chunk for filtering)
-level_3_labels <- as.character(pathway_transposed["level3", ])
-names(level_3_labels) <- colnames(pathway_data)
-level_2_labels <- as.character(pathway_transposed["level2", ])
-names(level_2_labels) <- colnames(pathway_data)
-
-# 1. Define the categories you want to throw away, here you get an overview of the available options:
-unique(level_3_labels)
-table(level_3_labels)
-unique(level_2_labels)
-table(level_2_labels)
-
 # 1. Define the exact categories you WANT to keep in this case we use level_2_to_filter
-# (Check the output of unique(level_3_labels) to make sure spelling matches perfectly!)
-#wanted_categories_level_3 <- c("Metabolism", "Genetic Information Processing", "Environmental Information Processing")
-wanted_categories_level_2 <- c("Xenobiotics biodegradation and metabolism","Biosynthesis of other secondary metabolites","Energy metabolism","Metabolism of cofactors and vitamins","Lipid metabolism","Carbohydrate metabolism","Membrane transport","Excretory system")
+# An overview of these categories can be seen by manually run the code within the 09_2_Tax4Fun_object_filtering.R script 
+
+# Select on which level you want to filter the tax4fun object:
+filter_on_KO_level <- 'level_2' # level_2 or level_3
+
+wanted_categories_level_3 <- c("Metabolism", "Genetic Information Processing", "Environmental Information Processing")
+#wanted_categories_level_2 <- c("Xenobiotics biodegradation and metabolism","Biosynthesis of other secondary metabolites","Energy metabolism","Metabolism of cofactors and vitamins","Lipid metabolism","Carbohydrate metabolism","Membrane transport","Excretory system")
 wanted_categories_level_2 <- c(
   "Xenobiotics biodegradation and metabolism", # <--- HERE IS YOUR PAH/BIOREMEDIATION DEGRADATION!
   "Energy metabolism",                         # <--- HERE IS YOUR METHANE/SULFUR/NITROGEN ANAEROBIC RESPIRATION!
   "Environmental adaptation",                  # Stress responses to anaerobic/toxic conditions
   "Cellular community - prokaryotes"           # Biofilm formation in the wetland substrate
 )
-
-#Filter the transpored pathway table, to only maintain the collumns of interest:
-pathway_transposed <- t(pathway_data)
-# 2. Find which columns (pathway IDs) satisfy BOTH of your inclusion rules
-#keep_columns <- which(level_3_labels %in% wanted_categories_level_3)
-keep_columns <- which(level_2_labels %in% wanted_categories_level_2)
-
-# 3. Filter your transposed matrix columns directly
-# (This preserves the level1, level2, level3 annotation rows at the bottom)
-filtered_pathway_transposed <- pathway_transposed[, keep_columns]
+#run the filtering script
+source(config$scripts$tax4fun_object_filtering)
 ```
-Now we have filtered out the pathways of interest, now we can go to data analysis and plotting. 
+## 7.3 Data object generation for analysis and visualization of the filtered data table
+Functional assignment using tax4funNow we have filtered out the pathways of interest, now we can go to data analysis and plotting. 
 ```{r}
-str(filtered_pathway_transposed)
-#first give me a very easy way to plot these results so I can get a general feel for the data 
-library(ggplot2)
-library(dplyr)
-library(tidyr)
+# now we will create a table which can be used for further data visualisation and plotting, and could be added to the metadata already present:
 # 1. Isolate biological samples from hierarchical character rows
-sample_rows  <- setdiff(rownames(filtered_pathway_transposed), c("level1", "level2", "level3"))
+sample_rows  <- setdiff(rownames(pathway_filtered), c("level1", "level2", "level3"))
 # HERE you choose the labels which will be assinged to the specific KOs
 #KO_names_for_plotting <- as.character(filtered_pathway_transposed["level2", ])
-KO_names_for_plotting <- as.character(filtered_pathway_transposed["level1", ])
+KO_names_for_plotting <- as.character(pathway_filtered["level1", ])
 
 # 2. Extract and strictly force the numbers to be numeric (Matrix conversion trick)
-raw_numeric_part <- filtered_pathway_transposed[sample_rows, ]
+raw_numeric_part <- pathway_filtered[sample_rows, ]
 clean_numeric_matrix <- as.data.frame(matrix(
   as.numeric(as.matrix(raw_numeric_part)), 
   nrow = nrow(raw_numeric_part), 
@@ -869,124 +1446,49 @@ clean_numeric_matrix <- as.data.frame(matrix(
 rownames(clean_numeric_matrix) <- rownames(raw_numeric_part)
 colnames(clean_numeric_matrix) <- colnames(raw_numeric_part)
 
-# 3. Transpose the pure numbers and attach their Level 2 grouping categories
+# 3. Transpose the pure numbers and attach their Level 1 grouping categories
 transposed_df <- as.data.frame(t(clean_numeric_matrix))
-transposed_df$Level2_Category <- KO_names_for_plotting
+transposed_df$Level1_Category <- KO_names_for_plotting
 
-# 4. Aggregate pathways by their Level 2 metadata groups using dplyr
-long_df <- transposed_df %>%
-  tidyr::pivot_longer(cols = -Level2_Category, names_to = "SampleID", values_to = "Abundance") %>%
-  dplyr::group_by(SampleID, Level2_Category) %>%
-  dplyr::summarise(Total_Abundance = sum(Abundance, na.rm = TRUE), .groups = "drop")
 
-# 5. Extract metadata from your phyloseq object and merge
-metadata_df <- as(sample_data(ps_work), "data.frame")
-metadata_df$SampleID <- rownames(metadata_df)
-
-plot_overview_df <- merge(long_df, metadata_df, by = "SampleID")
-# 6. Generate the Plot!
-ggplot(plot_overview_df, aes(x = short_name, y = Total_Abundance, fill = Level2_Category)) +
-  geom_col(position = "fill", width = 0.7) + 
-  scale_fill_viridis_d(option = "plasma") +   
-  theme_bw() +
-  labs(
-    title = "Macro-Level Functional Profile Overview",
-    subtitle = "Aggregated by Level 2 KEGG Categories",
-    x = "Sample Depth Information",
-    y = "Relative Proportion of Predicted Functions",
-    fill = "Metabolic Sectors"
-  ) +
-  theme(
-    text = element_text(size = 12),
-    plot.title = element_text(face = "bold", hjust = 0.5),
-    plot.subtitle = element_text(hjust = 0.5),
-    legend.position = "right",
-    axis.text.x = element_text(angle = 45, hjust = 1) 
-  )
+# Now that we have the data we want, we are going to put it into a format which can be added to the metadata file by copy pasting it
+config <- yaml::read_yaml(config_path)
+# generate a functional KO table which can be copy pasted into the metadata
+source(config$scripts$tax4fun_object_metadata_generation)
+#Now you can add this table to your microbiome metadataset for additional analysis
+head(metadata_sorted)
 ```
-Now that we have the data we want, we are going to put it into a format which can be added to the metadata file
+#Now we can do a preliminary data analysis on the genes of interest found in our sample
 ```{r}
-#We are going to stepwisely deconstruct and format the table into a suitable format for copy pasting it into the metadata for the phyloseq 
-# Here we aim to extract the information and add it to the phyloseq metadata
-# 1. Separate the 54 biological samples from the 3 hierarchical character rows
-sample_rows  <- setdiff(rownames(filtered_pathway_transposed), c("level1", "level2", "level3"))
-level1_names <- as.character(filtered_pathway_transposed["level1", ])
-level2_names <- as.character(filtered_pathway_transposed["level2", ])
-level3_names <- as.character(filtered_pathway_transposed["level3", ])
-ko_numbers   <- colnames(filtered_pathway_transposed)
-# 2. Extract and convert the text matrix part into a true numeric matrix
-raw_numeric_part     <- filtered_pathway_transposed[sample_rows, ]
-clean_numeric_matrix <- matrix(as.numeric(raw_numeric_part), 
-                               nrow = nrow(raw_numeric_part), 
-                               ncol = ncol(raw_numeric_part))
-rownames(clean_numeric_matrix) <- rownames(raw_numeric_part)
-colnames(clean_numeric_matrix) <- colnames(raw_numeric_part)
-# 3. Create a clean map framework connecting KO to all its hierarchical levels
-hierarchy_map <- data.frame(
-  KO_Number = ko_numbers,
-  Level1    = level1_names,
-  Level2    = level2_names,
-  Level3    = level3_names,
-  stringsAsFactors = FALSE
-)
-# 4. Convert the matrix to long format, join with our hierarchy map descriptions
-functional_long <- as.data.frame(t(clean_numeric_matrix)) %>%
-  tibble::rownames_to_column("KO_Number") %>%
-  tidyr::pivot_longer(cols = -KO_Number, names_to = "SampleID", values_to = "Count") %>%
-  dplyr::left_join(hierarchy_map, by = "KO_Number")
+tax4fun_pathway_data <- metadata_sorted
 
-# 5. Create a descriptive, unique column name combining Level information and KO ID
-# This prevents R from creating duplicate column headers during the widening step
-functional_long <- functional_long %>%
-  dplyr::mutate(Pathway_Column_Header = paste(Level1, KO_Number, sep = " - "))
+tax4fun_pathway_data_selection <- tax4fun_pathway_data[, c(105:136) ] 
+tax4fun_pathway_data_selection_matrix <- as.matrix(tax4fun_pathway_data_selection)
+# This can be different based on the object so check that you have all gene information you are interested in.
 
-# 6. Pivot the table wide so that Rows = Samples, and Columns = Your specific functions!
-functional_wide_metadata <- functional_long %>%
-  dplyr::select(SampleID, Pathway_Column_Header, Count) %>%
-  tidyr::pivot_wider(names_from = Pathway_Column_Header, values_from = Count) %>%
-  as.data.frame()
+#now we impute the zero's so we don't have the zero problem. we use 
+tax4fun_pathway_data_selection_matrix_bmr <- zCompositions::cmultRepl(tax4fun_pathway_data_selection_matrix, method = "GBM", output = "p-counts", label = 0, z.delete = 1, z.warning = 1)
+# if this gives an error this can mean that there are no zero's observed
+tax4fun_pathway_data_selection_matrix_bmr <-  tax4fun_pathway_data_selection_matrix
+#now we have handeled the zero problem, so we can move on to the CLR transformation
+tax4fun_pathway_data_selection_matrix_bmr_clr    <- microbiome::transform(tax4fun_pathway_data_selection_matrix_bmr, transform = "clr")
+# 4. Convert the CLR matrix back to a data frame and pimp the column names
+clr_df <- as.data.frame(tax4fun_pathway_data_selection_matrix_bmr_clr)
+colnames(clr_df) <- paste0(colnames(clr_df), "_CLR")
+# 5. Bind the CLR columns directly onto the back of your original object
+# Since the row order has not changed, a direct cbind is perfectly safe
+extended_metadata <- cbind(tax4fun_pathway_data, clr_df)
 
-rownames(functional_wide_metadata) <- functional_wide_metadata$SampleID
-
-
-# 7. Fix the strange dots R adds to the names of the columns
-# This converts any sequence of multiple periods generated by R back into a clean " - " separator
-colnames(functional_wide_metadata) <- gsub("\\.+", " - ", colnames(functional_wide_metadata))
-# Trim off any accidental trailing dashes or dots from the column edges
-colnames(functional_wide_metadata) <- gsub(" - $", "", colnames(functional_wide_metadata))
-
-# 1. Pull the original metadata dataframe from your phyloseq object
-metadata_df          <- as(sample_data(ps_work), "data.frame")
-metadata_df$SampleID <- rownames(metadata_df)
-
-# 2. Extract only the first 10 columns for easy viewing
-# We use unique() to make sure 'SampleID' is included even if it wasn't in the first 10 columns originally
-columns_to_keep         <- unique(c(colnames(metadata_df)[1:10], "SampleID"))
-metadata_pre_copy_paste <- metadata_df[, columns_to_keep, drop = FALSE]
-#Fix the sample order before merging:
-pls sort my metadata_pre_copy_paste based on its 'order_treatment' collumn, but now good, not with the standart 11 filtering, just from1 then 2 then 3
-
-# 3. Merge the compact metadata with your functional columns, in the right collumn using the left join function
-metadata_to_copy_paste <- metadata_pre_copy_paste %>%
-  dplyr::left_join(functional_wide_metadata, by = "SampleID")
-
-# Optional: Put SampleID as the very first column for easy Excel copy-pasting
-metadata_to_copy_paste <- metadata_to_copy_paste[, c("SampleID", setdiff(colnames(metadata_to_copy_paste), "SampleID"))]
-
-
-# 4. Create an output directory if it doesn't exist, and write out the file
-if(!dir.exists("results/all_wetlands/")) {
-  dir.create("results/all_wetlands/", recursive = TRUE)
-}
-
-# 5. Write the tab-separated file safely (Using the correct backslash \t)
-write.table(metadata_to_copy_paste, 
-            sep = "\t",
-            file = "results/all_wetlands/Extended_Functional_Respiration_Metadata.tsv", 
+#save the CLR transformed file, raw as an RDS object for potential functional analysis
+saveRDS(tax4fun_pathway_data_selection_matrix_bmr_clr, file = "results/all_wetlands/tax4fun_pathway_data_selection_matrix_bmr_clr.rds")
+# 5. Write the tab-separated file safely to copy paste behind the metadata with the CLR transformed version included
+write.table(extended_metadata, 
+            sep = "\t", dec = ",",
+            file = "results/all_wetlands/Extended_metadata_plus_CLR.tsv", 
             row.names = FALSE,
             quote = TRUE)
 
-#Now you can add this table to your microbiome dataset for additional analysis
+# To run a PCA on these results: see script 09_Run_PCA_on_functional_traits.R 
 ```
 
 

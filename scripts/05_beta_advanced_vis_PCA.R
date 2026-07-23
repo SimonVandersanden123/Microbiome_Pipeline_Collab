@@ -136,7 +136,7 @@ if (filter_taxon_loadings) {
   n_samples <- nrow(metadata_complete)
   
   # 2. Get your threshold from config (e.g., 3)
-  min_sample_count <- config$Beta_Diversity$advanced$filter_taxon_min_samples
+  min_sample_count <- config$Beta_Diversity$advanced$filter_taxon_prevalence_filter
   
   # 3. Calculate the prevalence threshold as a fraction
   # This turns "3" into "3/n_samples" (e.g., 3/40 = 0.075)

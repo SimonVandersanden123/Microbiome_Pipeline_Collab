@@ -14,7 +14,7 @@ project_metadata:
 
 paths:
   phyloseq_rds: "data/ps_taxid.final_with_tree.rds"
-  metadata_txt: "data/Wetland_Utrecht_Data_Final_Ordered_Cleaned_Plus_Grouping.txt"
+  metadata_txt: "data/Wetland_Recalculated_Metadata_Subselection_Analysis_With_TAX4FUN_DATA.txt"
 
 scripts:
   #Preprocessing
@@ -55,9 +55,9 @@ variance_filtering:
   apply_filter: true 
 
 subsetting:
-  use_subset: false
-  column_name: "SC_Number"
-  target_value: "SC6"
+  use_subset: true
+  column_name: "MF_number"
+  target_value: "EFF"
 
 ### 3.0 Community barcharts parameters
 Barplot_specific:
@@ -106,59 +106,72 @@ Alpha_Diversity:
 ### 5.0 Beta Diversity: Community Trait Analysis
 Beta_Diversity:
   # Global Plotting Settings
-  color_var: "CW_Number" #Sample_depth_information
-  shape_var: "MF_number"
+  color_var: "CW_number" #Sample_depth_information
+  shape_var: "Nanobubbles_On"
   show_ellipses: false
   show_labels: true
-  labels: "Sample_depth_information" #Timepoint
-  group_clustering: "MF_number"
+  labels: "timepoint" #Timepoint
+  group_clustering: "CW_number"
   
   fig_width: 12
   fig_height: 8
 
   # Section 5.1: Basic Ordination
   basic:
-    metric: "aitchison" # Options: aitchison, bray, jaccard, unifrac, wunifrac
+    metric: "wunifrac" # Options: aitchison, bray, jaccard, unifrac, wunifrac
     clr_variant: "BMR"
 
   # Section 5.2 & 5.3: Advanced (Vectors/Environmental Fit)
   advanced:
-    numeric_env_variables: ["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
-    categ_env_variables: ["Timepoint", "Sample_depth_information", "CW_Number"] # You can add things like "Reactor_Line" or "Stage" here later!
+    numeric_env_variables: ["concentration_BTEX_ug_l", "phosphorus_total", "pH", "EGV3"]
+    categ_env_variables: ["timepoint", "CW_number"] # ["Timepoint", "Sample_depth_information", "CW_Number"]
     top_asv_n: 0
-    target_tax_level: "genus"
+    target_tax_level: "family"
     filter_taxon_loadings: true
-    filter_taxon_abundance_filter: 0.005
-    filter_taxon_prevalence_filter: 0.0001 #roughly equates to being found in at least 6 different samples
+    filter_taxon_abundance_filter: 0.005 # the minimum relative abundance of the taxa you want to have
+    filter_taxon_prevalence_filter: 3 # in how many different samples does the taxon need to be present?
     # Scaling for PCA
     pca_arrow_taxa: 1
     pca_arrow_env: 2
     # Scaling for PCoA
     pcoa_arrow_taxa: 1
     pcoa_arrow_env: 1
+      # Section 5.2 & 5.3: Advanced (Vectors/Environmental Fit)
+  #advanced_for_rda:
+#    numeric_env_variables: ["concentration_BTEX_ug_l", "naphthalene_PAH_ug_l", "iron2_TOTAL_mmoles_e_l__sulfate_relative_to_1D_flow", "sulfate_consumption_1D_flow_mmols_e_l_no_negatives", "manganese2_electron_acceptor_capacity_mmol_e_l",
+#    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "manganese2_mg_l", "iron2_mg_l","sulfate_mg_l", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow"] #["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
+#    categ_env_variables: ["timepoint", "CW_number", "electron_balance_1D_flow", "dominant_electron_acceptor_species_1D_flow"] # ["Timepoint", "Sample_depth_information", "CW_Number"]
+#    top_asv_n: 0
+#    target_tax_level: "family"
+    
+    
 ### 6.0 LinDA
 Differential_Abundance:
-  target_level: "family"
-  
+  target_level: "family" 
+  numeric_env_variables: ["concentration_BTEX_ug_l", "phosphorus_total", "redoxpot", "pH", "EGV3", "naphthalene_PAH_ug_l", "iron2_TOTAL_mmoles_e_l__sulfate_relative_to_1D_flow", "sulfate_consumption_1D_flow_mmols_e_l_no_negatives", "manganese2_electron_acceptor_capacity_mmol_e_l",
+    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "manganese2_mg_l", "iron2_mg_l", "sulfate_mg_l","time_continuous", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow"]
+  categ_env_variables: ["timepoint", "CW_number", "CW_number_MF_number" , "sample_depth_information", "electron_balance_1D_flow", "dominant_electron_acceptor_species_1D_flow"]
   # Model Configuration
   model:
-    main_var: "Groundwater"
-    ref_group: "Below_GW"
+    main_var: "sample_depth_information"
+    ref_group: "0.15-0.30"
     # Note: Use double quotes for the formula to handle special characters
-    formula: "~ Groundwater * SUM.PAHs..EPA. + (1 | SC_Number)"
-  
+    formula: "~ time_continuous * sample_depth_information + sulfate_mg_l +iron2_mg_l + concentration_BTEX_ug_l + phosphorus_total + (1 | CW_number_MF_number)"
+
   # LinDA Algorithmic Parameters
   params:
-    prev_filter: 0.0050
+    prev_filter: 0.05
     is.winsor: "TRUE"
     outlier_pct: 0.03
     zero_handling: "imputation"
     pseudo_cnt: 0.5
-    alpha: 0.05
+    alpha: 0.01
     p_adj_method: "BH"
 
   # Visualization
   plotting:
-    var_to_plot: "SUM.PAHs..EPA." # Must match one of names(linda_res$output)
+    var_to_plot: "time_continuous:sample_depth_information0.60-0.80" # Must match one of names(linda_res$output)
     fig_width: 12
-    fig_height: 8
+    fig_height: 12
+    
+    #time_continuous , sample_depth_information0.60-0.80
