@@ -35,56 +35,87 @@ env_data <- env_data_pre[ord_sample_ids, , drop = FALSE]
 pcoa_coords <- as.data.frame(ord_beta$vectors[, 1:2])
 
 # Fit environmental variables onto the PCoA space
-ef_wunifrac <- vegan::envfit(pcoa_coords, env_data, permutations = 999, na.rm = TRUE)
+ef <- vegan::envfit(pcoa_coords, env_data, permutations = 999, na.rm = TRUE)
 
-# Extract and scale empirical scores using vegan's intrinsic multiplier
-ef_arrows <- as.data.frame(vegan::scores(ef_wunifrac, "vectors")) * vegan::ordiArrowMul(ef_wunifrac)
-ef_arrows$Variable <- rownames(ef_arrows)
-colnames(ef_arrows)[1:2] <- c("Dim1", "Dim2")
+# Safe extraction of vector scores (Guards against 0 numeric vectors matched)
+vector_scores <- vegan::scores(ef, "vectors")
 
-# Filter strictly for statistically significant environmental vectors
-sig_arrows <- ef_arrows[ef_wunifrac$vectors$pvals < 0.05, ]
-
-# Apply structure scale tuning using the specified pcoa_arrow_env config
-if (nrow(sig_arrows) > 0) {
-  scale_factor_env <- (max_point_limit / max(abs(c(sig_arrows$Dim1, sig_arrows$Dim2)))) * 0.75
-  sig_arrows$Dim1 <- sig_arrows$Dim1 * scale_factor_env
-  sig_arrows$Dim2 <- sig_arrows$Dim2 * scale_factor_env
+if (!is.null(vector_scores) && nrow(vector_scores) > 0) {
+  ef_arrows <- as.data.frame(vector_scores) * vegan::ordiArrowMul(ef)
+  ef_arrows$Variable <- rownames(ef_arrows)
+  colnames(ef_arrows)[1:2] <- c("Dim1", "Dim2")
+  
+  sig_arrows <- ef_arrows[ef$vectors$pvals < 0.05, , drop = FALSE]
+  
+  if (nrow(sig_arrows) > 0) {
+    scale_factor_env <- (max_point_limit / max(abs(c(sig_arrows$Dim1, sig_arrows$Dim2)))) * 0.75
+    sig_arrows$Dim1  <- sig_arrows$Dim1 * scale_factor_env
+    sig_arrows$Dim2  <- sig_arrows$Dim2 * scale_factor_env
+  }
+} else {
+  sig_arrows <- data.frame()
 }
 
-
-# 3. Taxa Correlation (Top ASVs Overlays)
+# 3. Taxa Correlation & Optional Abundance/Prevalence Filtering
 # ------------------------------------------------------------------------------
-# Extract OTU/ASV matrix and ensure samples occupy the rows
 otu_tab <- as(otu_table(ps_beta_input), "matrix")
 if (taxa_are_rows(ps_beta_input)) { 
   otu_tab <- t(otu_tab) 
 }
 
-# Correlate taxon abundances against PCoA coordinates (0 permutations for pure correlation)
 enfit_taxa  <- vegan::envfit(pcoa_coords, otu_tab, permutations = 0)
 taxa_scores <- as.data.frame(vegan::scores(enfit_taxa, "vectors"))
-taxa_scores$r2      <- enfit_taxa$vectors$r
+taxa_scores$r2 <- enfit_taxa$vectors$r
+colnames(taxa_scores)[1:2] <- c("Dim1", "Dim2") # Standardize axis column names
 
-# Map Taxon Taxonomy Labels
 tax_table_df <- as.data.frame(tax_table(ps_beta_input))
 taxa_scores$Taxon_Label <- tax_table_df[[target_level]]
-
-# Fallback to Sequence/ASV ID if the target taxonomic rank is unassigned (NA)
 taxa_scores$Taxon_Label[is.na(taxa_scores$Taxon_Label)] <- rownames(taxa_scores)[is.na(taxa_scores$Taxon_Label)]
 
-# Filter down to the top N driving taxa
-top_taxa_arrows <- taxa_scores %>%
-  arrange(desc(r2)) %>%
-  head(top_asv_n)
+total_initial_taxa <- nrow(taxa_scores)
 
-# Apply automated arrow scaling using the specified pcoa_arrow_taxa config
-if (nrow(top_taxa_arrows) > 0) {
-  scale_factor_taxa <- (max_point_limit / max(abs(c(top_taxa_arrows$Axis.1, top_taxa_arrows$Axis.2)))) * 0.75
-  top_taxa_arrows$Dim1 <- top_taxa_arrows$Axis.1 * scale_factor_taxa
-  top_taxa_arrows$Dim2 <- top_taxa_arrows$Axis.2 * scale_factor_taxa
+if (isTRUE(filter_taxon_loadings)) {
+  message("Applying abundance and prevalence filtering to PCoA taxa vectors...")
+  
+  ps_for_filter  <- mibi_tss 
+  otu_filter_mat <- as(phyloseq::otu_table(ps_for_filter), "matrix")
+  if (!phyloseq::taxa_are_rows(ps_for_filter)) { otu_filter_mat <- t(otu_filter_mat) }
+  
+  asv_means       <- rowMeans(otu_filter_mat)
+  asv_prevalences <- rowSums(otu_filter_mat > 0) / ncol(otu_filter_mat)
+  
+  n_samples                    <- nrow(metadata_complete)
+  min_sample_count             <- config$Beta_Diversity$advanced$filter_taxon_prevalence_filter
+  calculated_prevalence_filter <- min_sample_count / n_samples
+  
+  keep_asvs <- names(asv_means[asv_means >= filter_taxon_abundance_filter & 
+                                 asv_prevalences >= calculated_prevalence_filter])
+  
+  taxa_scores_filtered <- taxa_scores[rownames(taxa_scores) %in% keep_asvs, ]
+  taxa_kept            <- nrow(taxa_scores_filtered)
+  taxa_removed         <- total_initial_taxa - taxa_kept
+  
+  cat(sprintf("\n[Taxa Filter Report]:\n - Total input taxa: %d\n - Taxa filtered OUT: %d\n - Taxa RETAINED: %d\n\n", 
+              total_initial_taxa, taxa_removed, taxa_kept))
+  
+  if (nrow(taxa_scores_filtered) == 0) {
+    warning("Filtering thresholds are too strict! No taxa passed. Bypassing filter to prevent script crash.")
+    taxa_scores_filtered <- taxa_scores
+  }
+} else {
+  message("Taxon loading filter is disabled (FALSE). Processing all available taxa.")
+  taxa_scores_filtered <- taxa_scores
 }
 
+top_taxa_arrows <- taxa_scores_filtered %>%
+  dplyr::arrange(desc(r2)) %>%
+  head(top_asv_n)
+
+if (nrow(top_taxa_arrows) > 0) {
+  scale_factor_taxa    <- (max_point_limit / max(abs(c(top_taxa_arrows$Dim1, top_taxa_arrows$Dim2)))) * 0.75
+  top_taxa_arrows$Dim1 <- top_taxa_arrows$Dim1 * scale_factor_taxa
+  top_taxa_arrows$Dim2 <- top_taxa_arrows$Dim2 * scale_factor_taxa
+}
 
 # 4. Final Plot Construction
 # ------------------------------------------------------------------------------

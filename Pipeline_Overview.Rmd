@@ -6,7 +6,7 @@ output:
   html_document: default
   pdf_document: default
 params:
-  config_file: "configs/Config_Griftpark_Wetland_All_Wetland_Samples_New_Metadata.yaml"
+  config_file: "configs/Main_Config_Mibibio.yaml"
 ---
 
 ```{r setup, include=FALSE}
@@ -14,7 +14,7 @@ params:
 library(yaml)
 # SAFETY NET: If params doesn't exist (manual run), manually point to the file
 if (!exists("params") || is.null(params$config_file)) {
-  config_path <- "configs/Config_Griftpark_Wetland_All_Wetland_Samples_New_Metadata.yaml"
+  config_path <- "configs/Main_Config_Mibibio.yaml"
 } else {
   config_path <- params$config_file
 }
@@ -40,7 +40,7 @@ library(paletteer)
 library(stringr)
 library(yaml)
 library(NetCoMi)
-set.seed(99)
+set.seed(12345)
 ```
 
 ## 1:Loading in and inspecting the different parts of the phyloseq object
@@ -84,7 +84,7 @@ stopifnot(all(sample_names(mibi_phylo_object) %in% rownames(mibi_meta_table_new)
 sample_data(mibi_phylo_object) <- mibi_meta_table_new
 ```
 
-## 2.1:Data Pre-processing: Filtering out all non-samples and checking rarefaction curves
+## 1.1:Data Pre-processing: Filtering out all non-samples and checking rarefaction curves
 Normally some pre-filtering has been done on the reads before they were put into the phyloseq object: the sequencing depth threshhold, the decontamination, and some taxonomic filtering of certain undesired taxa such as Eukaryota, Mitochondria and Chloroplast sequences.
 ### Here we can remove some unecessary samples from the dataset.
 ### There is also the possibility to plot the rarefaction curves, to see wheter the sequencing depth is sufficiënt.
@@ -101,7 +101,7 @@ mibi_phylo_object <- prune_samples(
 # Run the rarefaction script using the path from config
 #source(config$scripts$rarefaction)
 ```
-## 2.1:Data Pre-processing: Filtering out based on prevalence and abundance
+## 1.2:Data Pre-processing: Filtering out based on prevalence and abundance
 
 Often prevalence or abundance filtering is done to remove uncertain features which can be artifacts created. or remove rare sequences, which might not be of interest to us. This is highly customisable so also all features can be kept however often for clarity, features are filtered out.
 Here you can filter on prevalence and abundance, you can also select either prevalence or either abundance.
@@ -124,7 +124,7 @@ source(config$scripts$filtering)
 # Resulting object 'mibi_phylo_object_filt' is now ready
 ```
 
-## 2.1:Data Pre-processing: Sample removal or subset selection
+## 1.3:Data Pre-processing: Sample removal or subset selection
 If you have a large dataset or are interested in specific samples, here you can select which samples or groups of samples you want to take a closer look at.
 ### The script knows whether to subset or keep the full dataset based on the config file
 ```{r}
@@ -152,7 +152,7 @@ if (config$subsetting$use_subset) {
   mibi_phylo_object_subset <- mibi_phylo_object_filt
 }
 ```
-## 2.2 Object selection: selecting the object for the normalisation, and further data analysis.
+## 1.3 Object selection: selecting the object for the normalisation, and further data analysis.
 ```{r}
 # Define which object flows into the analysis scripts.
 # We use the 'subset' object, which is either the actual subset 
@@ -179,11 +179,11 @@ message("--------------------------------------------------")
 
 ```
 
-# 2.2:Data Pre-processing: Normalisation & The "Zero Problem"
+## 1.4:Data Pre-processing: Normalisation & The "Zero Problem"
 
 Microbiome data is **compositional**. Because total read counts are an artifact of sequencer depth, they represent "parts of a whole" rather than absolute concentrations. If one taxon blooms, others appear to decrease simply because they occupy a smaller percentage of the total pool.
 
-### 3.1 Handling Sparsity (Zero Imputation)
+### Handling Sparsity (Zero Imputation)
 
 Log-ratio transformations (like CLR) cannot handle zeros because $\log(0)$ is undefined. We address this using two distinct approaches before transformation:
 
@@ -193,7 +193,7 @@ Log-ratio transformations (like CLR) cannot handle zeros because $\log(0)$ is un
 -   **Matrix Completion:** *Planned for future implementation.*
 
 ------------------------------------------------------------------------
-### 3.2 Executed Transformations
+### Executed Transformations
 The following background script processes the chosen `ps_work` object and generates the normalized data structures, using different methods.
 ```{r}
 # Requires: ps_work (defined above)
@@ -212,7 +212,7 @@ saveRDS(mibi_bmr_clr, file = "Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Wet
 saveRDS(ps_work, file = "Objects_Generated_In_Pipeline/ps_work_All_Wetland_Samples.rds")
 ```
 
-###The script generates three primary objects. Choosing the right one depends on your specific analysis:
+### The script generates three primary objects. Choosing the right one depends on your specific analysis:
 
 -mibi_tss Total Sum Scaling Visualization: Relative Abundance (%) used for stacked bar plots.
 
@@ -221,8 +221,10 @@ saveRDS(ps_work, file = "Objects_Generated_In_Pipeline/ps_work_All_Wetland_Sampl
 -mibi_bmr_clr BMR-CLR (Bayesian) Advanced Stats: High-fidelity modeling and differential abundance.
 
 Specific for the wetland sample analysis, a chunk of code to make some adjustments to the objects
+## 1.5 Small section to load in the previously preprocessed objects, to ensure the same objects are used during subsequent analyses
 ```{r}
 # We replace the filename, the separator (\t), and the decimal (,) with config values
+# Here you can modify the metadata, as often this needs replacement during the data analysis steps
 mibi_meta_table_new <- read.table(
   file = config$paths$metadata_txt, 
   header = TRUE, 
@@ -272,7 +274,9 @@ mibi_tss <- subset_samples(mibi_tss, get(barchart_target_col) == barchart_target
 
 ```
 
-# Community visualisation: barplots
+
+# 2. Community visualisation: barplots
+## 2.1 Relative abundance plots on specific levels
 This chunk is designed to plot relative abundances of you microbial community data, this takes the microbial community and you can select at which level the plotting is done, the labeling is two levels to ensure comprehensiveness, and detail (higher phylogenetic level and lower for the detail). The main color is determined by the high level taxonomy, variations of this main color are used in the lower levels. Several choices can be made, a relative abundance threshold level, which is a cutoff level for relative abundance, if a taxon does not meet this threshold i.e. all taxa with relative abundance below this threshold are put into 'Others'
 ```{r plot abundance, fig.width=12, fig.height=8}
 config <- yaml::read_yaml(config_path)
@@ -325,7 +329,7 @@ ggsave(paste0("results/CW_3/Relative_Abundance_Plot_", v_glob$high_level, "_", v
        plot = Relative_Abundance_Plot, width = v_glob$fig_width, height = v_glob$fig_height, dpi = v_glob$dpi)
 ```
 
-## Community visualisation, detailed group analysis.
+## 2.2 Relative abundance plots within specific groups
 This chunk of code is designed to plot relative abundances of you microbial community data. But here you can look within specific group and get the lower level taxonomic distribution so you can gain insights into specific important groups within you data.The labeling is two levels to ensure comprehensiveness, and detail (higher phylogenetic level and lower for the detail). The main color is determined by the high level taxonomy, variations of this main color are used in the lower levels. Several choices can be made, a relative abundance threshold level, which is a cutoff level for relative abundance, if a taxon does not meet this threshold i.e. all taxa with relative abundance belower this threshold are put into 'Others' 
 ```{r plot specific group abundance, fig.width=12, fig.height=8}
 source(config$scripts$barplot_focus)
@@ -376,10 +380,8 @@ ggsave(paste0("results/Specific_Group_Relative_Abundance_Plot_", v_foc$target_va
        plot = Specific_Group_Relative_Abundance_Plot, width = v_foc$fig_width, height = v_foc$fig_height, dpi = v_foc$dpi)
 ```
 
-## 4.0 Alpha Diversity: Community Trait Analysis
-
+# 3 Alpha Diversity: Community Trait Analysis
 Alpha diversity describes the complexity of a microbial community within a single sample. Rather than looking at "who is there," we look at the mathematical properties of the population structure. We categorize these traits into four pillars:
-
 -   **Richness:** The total number of unique taxa observed (how many species?).
 -   **Dominance:** Measures if the community is "top-heavy" with one or two abundant taxa.
 -   **Evenness:** How equally the individuals are distributed among the species.
@@ -446,7 +448,7 @@ ggsave(
 )
 ```
 
-## 5.0 Beta Diversity: Community Dissimilarity
+# 4.0 Beta Diversity: Community Dissimilarity
 
 Beta diversity quantifies the "distance" or "dissimilarity" between pairs of samples. To provide a non-redundant overview, we categorize these metrics based on whether they consider abundance (quantitative) vs. presence (qualitative), and phylogeny (evolutionary relatedness).
 
@@ -475,69 +477,82 @@ source(config$scripts$beta_vis_basic)
 
 plot(p_beta)
 ```
-## 5.2 Advanced Ordination: Environmental Correlation PCA variant
-
-#In this section, we upgrade the ordination by mapping environmental variables (vectors) and group shapes (hulls) onto the microbial landscape.
+## 4.1 Advanced Ordination: Environmental Correlation PCA variant
+### In this section, we upgrade the ordination by mapping environmental variables (vectors) and group shapes (hulls) onto the microbial landscape.
 
 ```{r plot beta diversity measures PCA using aitchison distance, fig.width=12, fig.height=8}
 config <- yaml::read_yaml(config_path)
 # --- USER INPUT: Beta Diversity Configuration ---
-# --- 1. CONFIG INPUT ---
-beta_metric      <- config$Beta_Diversity$basic$metric
-clr_variant      <- config$Beta_Diversity$basic$clr_variant
-color_var        <- config$Beta_Diversity$color_var
-shape_var        <- config$Beta_Diversity$shape_var
-group_clustering <- config$Beta_Diversity$group_clustering
-show_ellipses    <- isTRUE(config$Beta_Diversity$show_ellipses)
-show_labels      <- isTRUE(config$Beta_Diversity$show_labels)
-labels           <- config$Beta_Diversity$labels
+# --- 1. Input data from the configuration file:
+beta_metric      <- config$Beta_Diversity$basic$metric # choose the beta diversity metric you want to use to look at the data
+clr_variant      <- config$Beta_Diversity$basic$clr_zero_imputation_variant # choose the beta diversity metric you want to use to look at the data
+color_var        <- config$Beta_Diversity$color_var # Choose the colour which you want to colour the points on the PCA
+shape_var        <- config$Beta_Diversity$shape_var # Choose the shape which you want to colour the points on the PCA
+group_clustering <- config$Beta_Diversity$group_clustering # Choose the grouping variable which you want to use for drawing ellipses 
+show_ellipses    <- isTRUE(config$Beta_Diversity$show_ellipses) # Decide whether you want to draw ellipses on the figure
+labels           <- config$Beta_Diversity$labels # Decide with what variable you want to label your points 
+show_labels      <- isTRUE(config$Beta_Diversity$show_labels) # Decide whether you want to show sample labels on the figure
 
-# Advanced parameters (FIXED parsing paths)
 
-numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
-categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables
-top_asv_n                      <- config$Beta_Diversity$advanced$top_asv_n
-target_level                   <- config$Beta_Diversity$advanced$target_tax_level
-filter_taxon_loadings          <- isTRUE(config$Beta_Diversity$advanced$filter_taxon_loadings)
-filter_taxon_abundance_filter  <- config$Beta_Diversity$advanced$filter_taxon_abundance_filter
-filter_taxon_prevalence_filter <- config$Beta_Diversity$advanced$filter_taxon_prevalence_filter
-arrow_reduction_taxa           <- config$Beta_Diversity$advanced$pca_arrow_taxa
-arrow_reduction_env            <- config$Beta_Diversity$advanced$pca_arrow_env
-arrow_env_permanova_significance <- 0.05
+# Advanced parameters:
+## selection of the environmental variables: 
+numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables # Define the numerical environmental variables
+categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables # Define the categorical environmental variables
+filtering_env_variables_perm    <- isTRUE(config$Beta_Diversity$advanced$Filtering_env_variables_perm) # indicate wheter you want to filter out the environmental variables based on the marginal permanova results or not
+arrow_env_permanova_significance <- 0.05 # Here you specify the significance level cutoff for the p-values of the permanova of the environmental parameters.
+arrow_reduction_env            <- config$Beta_Diversity$advanced$pca_arrow_env # scaling factor for the arrows to improve the overal balance of the figure
+## taxon parameters settings:
+top_asv_n                      <- config$Beta_Diversity$advanced$top_asv_n # Determine the number of taxa which are shown, in this case the 'top' taxa are choosen based on their feature loadings
+target_level                   <- config$Beta_Diversity$advanced$target_tax_level # Determine on which phylogenetic level you want to select the taxa on 
+filter_taxon_loadings          <- isTRUE(config$Beta_Diversity$advanced$filter_taxon_loadings) # Determine wheter you want to further filter out these top taxa based on a certain abundance or prevalence filter level
+filter_taxon_abundance_filter  <- config$Beta_Diversity$advanced$filter_taxon_abundance_filter # set the minimum relative abundance you want to have, relative to 1, so 0.005 => 0.5%
+filter_taxon_prevalence_filter <- config$Beta_Diversity$advanced$filter_taxon_prevalence_filter # set the minimum number of samples your taxon needs to be present
+arrow_reduction_taxa           <- config$Beta_Diversity$advanced$pca_arrow_taxa # scaling factor for the taxa arrows to improve the overal balance of the figure
+#
 
-# --- 2. EXECUTION ---
+
+# --- 2. EXECUTION: here your run the scripts ---
 source(config$scripts$beta_calc)
-source(config$scripts$beta_vis_pca)
+source(config$scripts$beta_vis_pca) #if error, then make sure the right metric is choosen in the config file
 
 plot(p_beta_PCA)
 ```
 
-## 5.3 Advanced Ordination: Environmental Correlation PCoA variant
+## 4.2 Advanced Ordination: Environmental Correlation PCoA variant
 
 ```{r plot beta diversity measures PCoA using various distance matrices as input, fig.width=12, fig.height=8}
 config <- yaml::read_yaml(config_path)
 # --- USER INPUT: Beta Diversity Configuration ---
 # --- 1. CONFIG INPUT ---
-beta_metric      <- config$Beta_Diversity$basic$metric # Usually wunifrac/bray
-color_var        <- config$Beta_Diversity$color_var
-shape_var        <- config$Beta_Diversity$shape_var
-group_clustering <- config$Beta_Diversity$group_clustering
-show_ellipses    <- isTRUE(config$Beta_Diversity$show_ellipses)
-show_labels      <- isTRUE(config$Beta_Diversity$show_labels)
-labels           <- config$Beta_Diversity$labels
-# Advanced parameters (PCoA specific scaling)
-numerical_env_vars            <- config$Beta_Diversity$advanced$numerical_env_vars
-numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
-categorical_env_vars          <- config$Beta_Diversity$advanced$categorical_env_vars
+beta_metric      <- config$Beta_Diversity$basic$metric # choose the beta diversity metric you want to use to look at the data
+color_var        <- config$Beta_Diversity$color_var # Choose the colour which you want to colour the points on the PCA
+shape_var        <- config$Beta_Diversity$shape_var # Choose the shape which you want to colour the points on the PCA
+group_clustering <- config$Beta_Diversity$group_clustering # Choose the grouping variable which you want to use for drawing ellipses 
+show_ellipses    <- isTRUE(config$Beta_Diversity$show_ellipses) # Decide whether you want to draw ellipses on the figure
+labels           <- config$Beta_Diversity$labels # Decide with what variable you want to label your points 
+show_labels      <- isTRUE(config$Beta_Diversity$show_labels) # Decide whether you want to show sample labels on the figure
 
-numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables
-categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables
-top_asv_n            <- config$Beta_Diversity$advanced$top_asv_n
-target_level             <- config$Beta_Diversity$advanced$target_tax_level
-arrow_reduction_taxa <- config$Beta_Diversity$advanced$pcoa_arrow_taxa
+# Advanced parameters (PCoA specific scaling)
+numeric_env_variables            <- config$Beta_Diversity$advanced$numeric_env_variables # Define the numerical environmental variables
+categ_env_variables         <- config$Beta_Diversity$advanced$categ_env_variables # Define the categorical environmental variables
 arrow_reduction_env  <- config$Beta_Diversity$advanced$pcoa_arrow_env
+# Taxon parameters settings
+
+top_asv_n                      <- config$Beta_Diversity$advanced$top_asv_n # Determine the number of taxa which are shown, in this case the 'top' taxa are choosen based on their feature loadings
+target_level                   <- config$Beta_Diversity$advanced$target_tax_level # Determine on which phylogenetic level you want to select the taxa on 
+
+arrow_reduction_taxa <- config$Beta_Diversity$advanced$pcoa_arrow_taxa
+# Determine wheter you want to filter the taxa which are plotted on the graph, these taxon vectors are based on env_fit, so not super relevant.
+
+filter_taxon_loadings          <- isTRUE(config$Beta_Diversity$advanced$filter_taxon_loadings) # Determine wheter you want to further filter out these top taxa based on a certain abundance or prevalence filter level
+filter_taxon_abundance_filter  <- config$Beta_Diversity$advanced$filter_taxon_abundance_filter # set the minimum relative abundance you want to have, relative to 1, so 0.005 => 0.5%
+filter_taxon_prevalence_filter <- config$Beta_Diversity$advanced$filter_taxon_prevalence_filter # set the minimum number of samples your taxon needs to be present
+
+arrow_reduction_taxa           <- config$Beta_Diversity$advanced$pca_arrow_taxa # scaling factor for the taxa arrows to improve the overal balance of the figure
+
 fig_width <- config$Beta_Diversity$fig_width
 fig_height <- config$Beta_Diversity$fig_height
+
 
 # --- 2. EXECUTION ---
 source(config$scripts$beta_calc)
@@ -559,430 +574,91 @@ source(config$scripts$beta_vis_pcoa)
 plot(p_beta_PCoA)
 ```
 
-
-#RDA
+# 5 Microbial network analysis
+## 5.1 Microbial network analysis: Filtering of the phyloseq objectgeneration of the network object.
 ```{r}
-ggplot() +
-  # A. Origin Crosshairs
-  geom_hline(yintercept = 0, linetype = "dashed", color = "gray75", linewidth = 0.5) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "gray75", linewidth = 0.5) +
-  
-  # B. Microbial Samples (Points) - Colored by Wetland, shaped by Depth
-  geom_point(data = sample_coords, 
-             aes(x = RDA1, y = RDA2, color = CW_Number, shape = Sample_depth_information), 
-             size = 2.8, alpha = 0.75) +
-  
-  # C. Continuous Chemistry (Arrows)
-  geom_segment(data = arrow_coords,
-               aes(x = 0, y = 0, xend = RDA1 * arrow_scale, yend = RDA2 * arrow_scale),
-               arrow = arrow(length = unit(0.20, "cm")), 
-               color = "firebrick3", linewidth = 0.7, alpha = 0.8) +
-  
-  # D. Labels for Chemistry Arrows
-  geom_text(data = arrow_coords,
-            aes(x = RDA1 * (arrow_scale + 0.2), y = RDA2 * (arrow_scale + 0.2), label = Variable),
-            color = "firebrick4", fontface = "bold", size = 3.5) +
-  
-  # E. Categorical Feature Centroids (Labels in white boxes)
-  geom_label(data = centroid_coords,
-             aes(x = RDA1 * arrow_scale, y = RDA2 * arrow_scale, label = Factor_Level),
-             color = "dodgerblue4", fill = "white", fontface = "bold", size = 3.5,
-             label.padding = unit(0.15, "lines"), box.padding = 0.5, alpha = 0.9) +
-  
-  # F. Theme & Aesthetics
-  theme_bw() +
-  scale_color_brewer(palette = "Set1") + 
-  labs(title = "Robust Aitchison RDA Ordination Biplot",
-       subtitle = "Model Adj. R² = 12.4%, Global p = 0.001 (All marginal terms p < 0.05)",
-       x = "RDA1 (6.78% variance explained)", 
-       y = "RDA2 (4.21% variance explained)",
-       color = "Constructed Wetland",
-       shape = "Sample Depth (m)") +
-  theme(panel.grid.major = element_blank(),
-        panel.grid.minor = element_blank(),
-        plot.title = element_text(face = "bold", size = 13),
-        axis.title = element_text(face = "bold", size = 11),
-        legend.title = element_text(face = "bold"),
-        legend.position = "right")
-
-
-
-
-```
-
-
-## 6. Differential_abundance_LinDA.R
-### We use the filtered and not normalised phyloseq object, since LinDA handels the normalisation
-### To make plots readable agglomerate at the selected phylogenetic level
-### select the phylogenetic level to what the taxa should be agglomerated.
-In this script we do a differential abundance analysis. In the following chunk calculations are made.
-```{r, input script for LinDA here the model is defined and differental abundance calculations are done}
 config <- yaml::read_yaml(config_path)
-# --- 1. PREPARATION ---
-target_level_linda <- config$Differential_Abundance$target_level
 
-# In order te get a readable plot for LinDA, it is better to agglomerate the reads to a specific phylogenetic level
-# they you get information on how mayor groups of bacteria respond to the specified model, 
-# otherwise raw sequences will be given.
-#-----------------------------------------------------------------------------------------
-ps_glommed <- phyloseq::tax_glom(ps_work, taxrank = target_level_linda, NArm = TRUE) 
-#----------------------------------------------------------------------------------------
-#In this step all ASVs which have the same taxonomic level will be agglomerated.
-# For plotting we need to change the sequences in the OTU table to a specific taxonomic label otherwise raw sequences will be visible on the plot.
-otu_tab <- as.data.frame(t(otu_table(ps_glommed)))
-# extract the OTU table from the agglomerated object
-tax_tab <- as.data.frame(tax_table(ps_glommed)) # extract the taxonomy table from the agglomerated object
-taxa_labels <- as.character(tax_tab[, target_level_linda])
-unique_taxa_ids <- make.unique(taxa_labels, sep = ".")
-#is then added to the otu and tax table in the following line: 
-rownames(otu_tab) <- unique_taxa_ids
-rownames(tax_tab) <- unique_taxa_ids
+# Network Analysis Parameters
+net_params <- list(
+  # Step 1. Pre-processing & Taxonomic Agglomeration
+  # --- Input Data & Pre-processing ---
+  ps_input          = ps_work,
+  skip_preprocessing = TRUE, # TRUE: Load pre-agglomerated cache phyloseq object | FALSE: Build from ps_input
+  cache_path        = "Objects_Generated_In_Pipeline/Network_Analysis/ps_network_analysis_renamed_wetland_samples.rds",
+    # --- Taxonomy Settings ---
+  tax_level         = "genus", # Target level for agglomeration and unique node naming, this is needed for making the original object which gets used in the further subsampling, mainly to select the phylogenetic level and making the labels unique.
+  # Step 2. Dynamic Two-Layer Sample Subsetting
+  # --- Subsampling (Optional testing/debugging cap) ---
+  subsample_input   = FALSE, # TRUE: Limit initial ps_input to first N samples
+  subsample_n       = 162,  # Number of samples to retain if subsample_input = TRUE
 
-#-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-#METADATA FORMATTING
-#extract the metadata
-metadata_correct_format <- data.frame(sample_data(ps_glommed))
-#convert it to a suitable format
-# Define your variables of interest
-categ_env_variables   <- config$Differential_Abundance$categ_env_variables
-numeric_env_variables <- config$Differential_Abundance$numeric_env_variables
-# =====================================================================
-# 1. AUTOMATED FACTOR CONVERSION LAYER (Generalized)
-# =====================================================================
-for (cat_var in categ_env_variables) {
-  if (cat_var %in% colnames(metadata_correct_format)) {
-    # Clean up column to a character format first, then cast to a standard factor
-    # This ensures R handles any messy mixed-type inputs or text labels cleanly
-    metadata_correct_format[[cat_var]] <- factor(as.character(metadata_correct_format[[cat_var]]))
-    message(paste("Successfully converted to factor:", cat_var))
-  } else {
-    warning(paste("Configured categorical variable not found in dataset columns:", cat_var))
-  }
-}
-# =====================================================================
-# 2. AUTOMATED NUMERICAL CONVERSION LAYER (Generalized)
-# =====================================================================
-for (num_var in numeric_env_variables) {
-  if (num_var %in% colnames(metadata_correct_format)) {
-    # Step A: Convert to character and strip common hidden spacing/text issues
-    clean_chars <- as.character(metadata_correct_format[[num_var]])
-    clean_chars <- trimws(clean_chars) # Remove leading/trailing whitespaces
-    # Step B: Cast explicitly to numeric double
-    # Suppress warnings temporarily so R doesn't flood the console if 
-    # text like "missing" or "BDL" naturally turns into NA
-    suppressWarnings({
-      numeric_vector <- as.numeric(clean_chars)
-    })
-    # Save the clean numeric vector back into your corrected formatting table
-    metadata_correct_format[[num_var]] <- numeric_vector
-    message(paste("Successfully converted to numeric metric:", num_var))
-    # Optional Safety Check: Report if the conversion introduced any new NAs
-    raw_na_count <- sum(is.na(clean_chars)) # check NAs before parsing
-    new_na_count <- sum(is.na(numeric_vector))
-    if (new_na_count > raw_na_count) {
-      warning(paste0(
-        "Variable '", num_var, "' contained non-numeric text strings (e.g., 'ND', '<LOD', or blanks) ",
-        "which have been automatically forced to NA values."
-      ))
-    }
-  } else {
-    warning(paste("Configured numeric variable not found in dataset columns:", num_var))
-  }
-}
-all_target_cols <- c(categ_env_variables, numeric_env_variables)
-#-----------------------------------------------------------------------------
-# Extract ONLY target metadata columns into a fresh table
-linda_metadata <- metadata_correct_format[, all_target_cols]
-# Optional check the structure of the final metadata object 
-str(linda_metadata)
-
-
-#------------------------------------------------------------------------------------------------------------------
-# Setting up the model
-config <- yaml::read_yaml(config_path)
-# --- 2. MODEL SETUP ---
-l_mod <- config$Differential_Abundance$model
-
-# Ensure the formula is a single string (R sometimes imports YAML as a list)
-linda_formula_string <- paste(l_mod$formula, collapse = "")
-
-# Set Reference dynamically
-linda_metadata [[l_mod$main_var]] <- relevel(factor(linda_metadata [[l_mod$main_var]]), 
-                                     ref = l_mod$ref_group)
-
-# 3. Ensure your random intercept is strictly classified as a factor
-linda_metadata$CW_number_MF_number <- factor(linda_metadata$CW_number_MF_number)
-
-# --- 3. RUN LINDA ---
-l_params <- config$Differential_Abundance$params
-linda_res <- linda(
-  feature.dat     = otu_tab, 
-  meta.dat        = linda_metadata, 
-  formula         = linda_formula_string,
-  feature.dat.type = "count",
-  prev.filter     = l_params$prev_filter,
-  is.winsor       = TRUE,
-  outlier.pct     = l_params$outlier_pct,
-  zero.handling   = l_params$zero_handling,
-  pseudo.cnt      = l_params$pseudo_cnt,
-  alpha           = l_params$alpha,
-  p.adj.method    = l_params$p_adj_method
+  # --- Sample Subsetting (2-Layer Metadata Filters) ---
+  # Layer 1: Primary filter
+  filter1_var       = "timepoint",
+  filter1_val       = c("T0", "T1", "T2", "T3"),
+  
+  # Layer 2: Secondary filter (Set filter2_var = NULL to disable)
+  filter2_var       = "CW_number",
+  filter2_val       = c("CW_2"),
+  # Step 3. Prevalence Taxonomic Filtering
+  # --- Taxa Filtering ---
+  min_prevalence    = 0.25 # Retain taxa present in >= 25% of subset samples (0.0 to disable)
 )
-# From this linda output you can plot multiple things
+
+# Run external modular script
+source(config$scripts$network_analysis_object_selection)
+
 
 ```
 
-# Plotting the Linda results
-The interpretation of these results must be done carefully depending on the Linda input, Think about the model formula, and reference level since these will be essential in interpreting the output
-
-For example, if you are working with a model which includes an interaction term. If you specify the reference group as above groundwater, then if you plot the 'SUM.PAHs..EPA.' then you will get how the bacteria differ in log fold change as if the conditions were above groundwater. 
-
-Now if we are interested in how the bacteria differ in log fold changes with respect to PAH level below groundwater level, we need to change the reference group to below groundwater level to base the model on.
-
-There is the possibility: "Groundwater_levelbelow:SUM.PAHs..EPA." which will indicate how the taxa 'respond to PAH levels below groundwater level' but the interaction term changes the interpretation greatly. So be carefull with the interpretation.
-```{r plot LinDA results, fig.width=config$Differential_Abundance$plotting$fig_width, fig.height=config$Differential_Abundance$plotting$fig_height}
+## 5.2 Network construction step:
+```{r}
 config <- yaml::read_yaml(config_path)
-# Define which effect to visualize from Config
-var_to_plot <- config$Differential_Abundance$plotting$var_to_plot
+# Method selection: "sparcc" (Correlation), "spring" (Conditional Dependence), or "propr" (Proportionality)
+network_association_method ="sparcc"
+# Choices: "genus", "family",....
+network_tax_level        = "genus"
+# Choices: "signed" (default), "unsigned", "signedPos", "TOMdiss"
+network_Distance_Properties = "signed"
+# Network Construction Parameters
+net_build_params <- list(
+  # Primary input (generated by previous script step)
+  ps_input         = ps_object_for_network_analysis,
+  # Method selection: "sparcc" (Correlation), "spring" (Conditional Dependence), or "propr" (Proportionality)
+  method           = network_association_method,
+  # Grouping variable for multi-network generation (Set NULL if no grouping)
+  group_var        = "sample_depth_information",
+  # Taxonomic Settings
+  tax_level        = network_tax_level,
+  # Taxa Subsetting / Filtering within netConstruct
+  filter_tax_method = "highestFreq", # e.g., "highestFreq", "none", "totalReads"
+  top_taxa_n        = 50,            # Number of top taxa to retain
+  # Sparsification / Thresholding Parameters
+  spars_method     = "threshold",
+  thresh_sparcc    = 0.3,
+  thresh_propr     = 0.6,
+  # SPRING Specific Parameters
+  spring_nlambda   = 10,
+  spring_rep_num   = 10,
+  spring_rmethod   = "approx",
+  # Visualization / Distance Properties
+  # Choices: "signed" (default), "unsigned", "signedPos", "TOMdiss"
+  diss_func        = network_Distance_Properties, 
+  # Global Execution Settings
+  seed             = 123456,
+  verbose          = 2,
+  # Output Caching
+  save_output      = TRUE,
+  output_rds_path  = "Objects_Generated_In_Pipeline/Network_Analysis/network_constructed_object.rds"
+)
 
-log_fold_cutoff_plotting <- "0.5"
-
-colour_positive <- "#17becf"
-
-colour_negative <- "#f8766d"
-## dodgerblue4, firebrick4
-### 17becf, #f8766d
-### DARK : #0a0d36
-names(linda_res$output)
-#>  names(linda_res$output)
-# [1] "time_continuous"                                   "sample_depth_information0.60-0.80"                
-#[3] "manganese2_mg_l"                                   "iron2_mg_l"                                       
-#[5] "concentration_BTEX_ug_l"                           "phosphorus_total"                                 
-#[7] "time_continuous:sample_depth_information0.60-0.80"
-
-var_to_plot <- "CW_number_MF_numberCW_3_MF05"
-# Run the plotting script
-source(config$scripts$linda_plot)
-```
-
-
-Small chunk of code to test which models are the best 
-```{r, }
-
-# Calculate your overall Aitchison (Euclidean on CLR) distance matrix
-distance_matrix <- vegdist(t(otu_table(mibi_bmr_clr)), method = "euclidean")
-
-# Model 1: Additive formula (No Interaction)
-permanova_additive <- adonis2(distance_matrix ~ time_continuous + sample_depth_information + 
-                              electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow + concentration_BTEX_ug_l + phosphorus_total, 
-                              data = linda_metadata, permutations = 999)
-
-print(permanova_additive)
-# Model 2: Interaction formula (Time * Depth)
-permanova_interaction <- adonis2(distance_matrix ~ time_continuous * sample_depth_information + 
-                                 electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow + concentration_BTEX_ug_l +phosphorus_total, 
-                                 data = linda_metadata, permutations = 999)
-print(permanova_interaction)
-
+# Run external modular script
+source(config$scripts$network_construction)
 
 ```
-
-# 8.1 Microbial network analysis: Filtering of the phyloseq objectgeneration of the network object.
+## 5.3 Network selection and analysis
 ```{r}
-library(NetCoMi)
-# =====================================================================
-# 1. Selection and filtering of the phyloseq object to use for network selection
-# =====================================================================
-# =====================================================================
-# First: Select the phyloseq object choose the original filtered for interest data table with no prior normalisation. because the function itself allows for multiple normalisation methods internally
-# =====================================================================
-ps_network_analysis <- ps_work
-## 1. Get the names of the first 5 samples
-#first_50_samples <- sample_names(ps_network_analysis)[1:162]
-## 2. Subset the phyloseq object
-#ps_debug <- subset_samples(ps_network_analysis, sample_names(ps_network_analysis) %in% first_50_samples)
-#
-#
-#
-#ps_debug # with this the pipeline can be tested/debugged
-#otu_debug <- as(otu_table(ps_debug), "matrix")
-#
-## Agglomerate to genus level
-#ps_debug_genus <- tax_glom(ps_debug, taxrank = "genus")
-#
-## Rename taxonomic table and make genus unique, Because the taxonomic level which you want to use to make the networks, must be unique.
-#ps_debug_genus_renamed <- renameTaxa(ps_debug_genus, 
-#                                  pat = "<name>", 
-#                                  substPat = "<name>_<subst_name>(<subst_R>)",
-#                                  numDupli = "genus")
-##Save this object for later network construction
-#saveRDS(ps_debug_genus_renamed, file = #"Objects_Generated_In_Pipeline/Network_Analysis/ps_network_analysis_Genus_renamed_wetland_samples.rds")
-# =====================================================================
-# Load in the previously generated network analysis object with renamed genus,...
-# =====================================================================
-ps_debug_genus_renamed <- readRDS("Objects_Generated_In_Pipeline/Network_Analysis/ps_network_analysis_Genus_renamed_wetland_samples.rds")
-# =====================================================================
-# 2. Subsetting and filtering
-# ====================================================================
-ps_debug_genus_renamed_selection <- subset_samples(ps_debug_genus_renamed, timepoint %in% c("T0","T1","T2","T3"))
-
-ps_debug_genus_renamed_selection_2layer_filtering <- subset_samples(ps_debug_genus_renamed_selection, CW_number %in% c("CW_2"))
-#Rename it after you do the two layer filtering :
-ps_debug_genus_renamed_selection <- ps_debug_genus_renamed_selection_2layer_filtering
-#ps_debug_genus_renamed_selection <- subset_samples(ps_debug_genus_renamed, timepoint %in% c("T1", "T2", "T3"))
-#ps_object_for_network_analysis <-ps_debug_genus_renamed_selection  # incase you don't want to do further filtering
-# =====================================================================
-# Further filtering for the network analysis, prevalence 
-# =====================================================================
-# Keep only genera that are present in at least 25% of your samples 
-
-prevalence_threshold <- 0.25 * nsamples(ps_debug_genus_renamed_selection)
-core_genera <- taxa_names(filter_taxa(ps_debug_genus_renamed_selection, function(x) sum(x > 0) >= prevalence_threshold, TRUE))
-# Create a temporary phyloseq object with only your widespread taxa, this is 
-ps_prevalence_filtered <- prune_taxa(core_genera, ps_debug_genus_renamed_selection)
-# here you select the object which will be used for the network analysis
-ps_object_for_network_analysis <- ps_prevalence_filtered
-
-```
-
-# Network construction step:
-```{r}
-# =====================================================================
-# =====================================================================
-# Network construction step, there are multiple ways of constructing the network: 
-# =====================================================================
-# =====================================================================
-# There are 3 main ways of associating the taxa of interest:
-# Correlation, proportionality and conditional dependence
-# From each of these measures, there are also different ways of data filtering, zero handling and normalization methods.
-# I have included one section for each one of these major association methods to generate the networks, since the choice of association has a great impact on the structure of the final network.
-### Specific parameters customisation is mentioned in the 'help' files associated with the function, for some important parameters, short information is included in the current script.
-                                       # help("netConstruct")
-# An important one which is important for the visualisation: dissFunc: there are multple measures to calculate the dissimilarity between the different taxa which will determine the position of the taxa within the final visualisation. And therefore also the interpretation or intuition of the resulting network. 
-    #-**unsigned**: leading to low distance between strongly **associated** taxa (both positively associated as well as negatively associated) 
-  #-**signed:** where the distance between the nodes is highest for strongly negative associated taxa. (default)
-  #-**SignedPos,** signed distance with setting negative assocations to zero.
-  #-There is also TOMdiss: dissimilarity measure available  based on the topological overlap matrix (TOM), instead of looking at the relationships between the taxa in isolation, it evaluates the shared neighborhood context. (if taxa share a lot of the same neighbors, they will be closer to one another)
-# =====================================================================
-# Correlation based methods
-# =====================================================================
-# We start off with Correlation, since this is the most intuitive and 'straight forward method:
-  ## Correlation-based networks represent co-occurrence patterns (marginal associations) rather than direct biological   interactions. In these networks, if Taxon A and Taxon B both thrive in the same environmental niche (e.g., sharing a specific depth or pH preference), they will show a strong positive correlation. However, this correlation is often a "ghost" or spurious association driven by a shared environmental confounder rather than a direct relationship.
-
-  ## To identify actual direct relationships, conditional dependence methods (such as SPRING) are used. These methods evaluate whether Taxon A and Taxon B remain associated after conditioning on (controlling for) all other taxa in the dataset (Taxon C,D,...). This statistical control actively filters out indirect paths and shared environmental effects.
-
-## Network Construction using SparCC: For our correlation-based analysis, we utilized SparCC (Sparse Correlations for Compositional data). Traditional correlation metrics (like Pearson or Spearman) yield spurious results on microbiome datasets due to their compositional nature (where relative abundances must sum to 1). SparCC is specifically designed to be compositionally aware, utilizing log-ratio transformations to estimate true correlation coefficients without compositionality bias.
-
-### Here normalisation and zero replacement methods are automatically selected so there is no need to specify it 
-# The correlation based network construction script: 
-
-network_correlation_based <- netConstruct(ps_object_for_network_analysis,  
-                          measure = "sparcc",
-                          #normMethod = "clr", This normalisation method is not needed for sparcc
-                          filtTax = "highestFreq",
-                          group = as.character(phyloseq::sample_data(ps_object_for_network_analysis)$sample_depth_information),
-                          taxRank = "genus",
-                          filtTaxPar = list( highestFreq = 50),
-                          #zeroMethod = "multRepl", This is not needed for sparcc
-                          sparsMethod = "threshold",
-                          thresh = 0.3,
-                          dissFunc = "TOMdiss", # There are different methods for calculating the dissimilarity signed"(default), "unsigned", "signedPos", "TOMdiss"
-                          verbose = 3,seed = 123456)
-
-props_SparCC <- netAnalyze(network_correlation_based, 
-                          clustMethod = "cluster_fast_greedy")
-
-# =====================================================================
-# Conditional dependence based method
-# =====================================================================
-## Conditional Dependence (Direct Relationships): This approach determines if Taxon A and Taxon B are still connected once we statistically account for the rest of the community (Taxon C). It strips away these indirect, environmentally-driven "ghost" connections to reveal the true backbone of the network.
-
-## We do the network constuction using the SPRING, Unlike traditional correlation metrics that yield spurious results on compositional microbiome data (where relative abundances must sum to 1), SPRING is fully compositionally aware.This allows SPRING to estimate a sparse precision matrix representing true conditional independence, successfully distinguishing direct ecological interactions from indirect background noise.
-
-### Here normalisation and zero replacement methods are automatically selected so there is no need to specify it 
-# The conditional dependence based network construction script: 
-network_conditional_dependence_based <- netConstruct(ps_object_for_network_analysis,
-                           #or the prevalence filtered taxa:ps_prevalence_filtered
-                           taxRank = "genus",
-                           filtTax = "highestFreq",
-                           filtTaxPar = list( highestFreq = 50), #select the number of taxa #filtTaxPar = list(highestFreq = 40)
-                           filtSamp = "none",
-                           measure = "spring",
-                           group = as.character(phyloseq::sample_data(ps_object_for_network_analysis)$sample_depth_information),# Here adjust it to the input object, can be used to generate multiple networks
-                           measurePar = list(nlambda=10, 
-                                             rep.num=10,
-                                             Rmethod = "approx"),
-                           dissFunc = "signed", # There are different methods for calculating the dissimilarity signed"(default), "unsigned", "signedPos", "TOMdiss", Signed if you want to look at the direct relationships between the different taxa. TOMdiss, if you want to value the taxon's other connections.
-                           verbose = 2,
-                           seed = 123456)
-library(remotes)
-# =====================================================================
-# Proportionality based method
-# =====================================================================
-#############################
-## Network Construction using Proportionality (rho)
-
-#We construct the microbial networks using **Proportionality (rho)**. Unlike traditional correlation metrics (such as #Pearson or Spearman) that yield spurious (fake) associations on compositional relative abundance data, the #proportionality measure rho is fully compositionally aware and sub-compositionally coherent. It is a symmetric measure #with values scaled between -1 and +1 (where +1 represents perfect positive proportionality), making it directly #comparable to standard correlation coefficients and suitable for standard network topology algorithms.
-
-#### Connection to Pearson Correlation
-#The formula for rho is highly analogous to the classic **Pearson Correlation Coefficient (r)**. 
-#Recall that Pearson's correlation scales covariance using the geometric mean of the variances:
-#r(Ai, Aj) = cov(Ai, Aj) / square_root([var(Ai)]^2 * [var(Aj)]^2)
-#In contrast, proportionality rho scales the relationship using the arithmetic mean of the variances. It is calculated as: rho(log(x_i),log(x_j) = 1 - [ var( log(x_i / x_j) ) / ( var(log(x_i)) + var(log(x_j)) ) ]
-
-#### Breaking Down the Formula Components:
-#
-#* **log(x_i / x_j)**: Takes the logarithm of the ratio of the two taxa. This is mathematically equivalent to the #difference of their logs: log(x_i) - log(x_j). if this log(x_i)- log(y_i) = a constant value, this means that the ratio's of these taxa are roughly equal overall and, then the variance of this term is low.=>
-#* **var( log(x_i / x_j) )**: Calculates the Log-Ratio Variance (VLR). If the ratio between two taxa stays highly consistent across different samples/conditions, this variance will be very close to 0.
-#* **var(log(x_i)) + var(log(x_j))**: Represents the sum of the individual variances of the log-transformed data, acting as a scaling/standardising factor. (Note: In practice, to make this compositionally safe, NetCoMi calculates this using Centered #Log-Ratio (CLR) transformed values).
-#### The Three Core Scenarios for interpreting the rho scores:
-#
-##### 1. Perfect Positive Proportionality (rho = 1)
-#If Taxon x is always for example exactly 3 times more abundant than Taxon y, their ratio x/y is a constant (3). 
-#* The log of a constant is a constant (log(3) is approximately 1.099).
-#* The variance of a constant across samples is 0. Plugging this into the numerator of the formula yields:
-#rho = 1 - [ 0 / (var(log(x)) + var(log(y))) ] = 1 - 0 = 1
-
-##### 2. Complete Independence (rho = 0)
-#If the two genera have absolutely nothing to do with each other, the variance of their difference is simply the sum of their individual variances: 
-#var(log(x) - log(y)) = var(log(x)) + var(log(y))
-#* Under this condition, the numerator becomes identical to the denominator.Therefore the fraction simplifies to 1, yielding:
-#rho = 1 - 1 = 0
-
-##### 3. Perfect Inverse Proportionality (rho = -1)
-#If one taxon increases while the other decreases, their covariance is highly negative. The variance of their difference expands because of the algebraic rule:
-#var(log(x) - log(y)) = var(log(x)) + var(log(y)) - [ 2 * cov(log(x), log(y)) ]
-#* Because covariance is negative, subtracting it becomes addition: - [ 2 * (-covariance) ] = + [ 2 * #absolute_value_of_covariance ]. 
-#* This makes the variance of their difference (the numerator) significantly larger than the sum of their individual  variances (the denominator).
-#* Due to mathematical boundaries, the numerator can never exceed twice the value of the denominator. Thus, the fraction #is capped at 2:
-#rho = 1 - 2 = -1
-#* This lower limit of -1 represents a perfect reciprocal relationship. Because the raw data is first CLR-transformed,  even exponential differences between competing bacteria are successfully projected into this symmetric, linear -1 to +1  space.
-######
-### To achieve this, rho  modifies the log-ratio variance using Centered Log-Ratio (clr) transformed data. This provides a #scaled, robust association metric that is mathematically immune to compositionality bias, allowing us to reconstruct true #co-abundance patterns without the risk of false-positive correlations.
-
-## We do the network constuction using the propr package, which uses clr transformed data
-### Here normalisation and zero replacement methods are automatically selected so there is no need to specify it
-library(propr)
-network_proportionality_based <- netConstruct(ps_object_for_network_analysis, 
-                                            taxRank = "genus", 
-                                            filtTax = "highestFreq", 
-                                            filtTaxPar = list(highestFreq = 50), 
-                                            filtSamp = "none", 
-                                            measure = "propr", 
-                                            group = as.character(phyloseq::sample_data(ps_object_for_network_analysis)$sample_depth_information),
-                                            # --- ADDED THESE TWO LINES TO FIX THE ERROR ---
-                                            sparsMethod = "threshold",
-                                            thresh = 0.6, # Adjust this value (e.g., 0.2 to 0.5) depending on how sparse you want your network
-                                            # ----------------------------------------------
-                                            dissFunc = "signed", # There are different methods for calculating the dissimilarity signed"(default), "unsigned", "signedPos", "TOMdiss"
-                                            verbose = 2, 
-                                            seed = 123456)
-
-```
-Network selection and analysis
-```{r}
-# Here you make the selection of which network you are going to analyse:
-network_to_analyse <- network_proportionality_based #network_correlation_based, network_conditional_dependence_based or network_proportionality_based
 # =====================================================================
 # Now we start with the network analysis, there is a lot that can be done with the generated network
 # =====================================================================
@@ -1012,6 +688,7 @@ summary(props_network_to_analyse, numbNodes = 5L)
 # =====================================================================
 # In this part we want to plot the network, here again there are a million ways of plotting the network, dependent on the manner the edges and node positiontioning is done, this can be done on multiple network traits.
 # =====================================================================
+###############################
 plot_network <- plot(props_network_to_analyse, 
           labelScale = FALSE,
           nodeColor = "cluster",  
@@ -1019,138 +696,46 @@ plot_network <- plot(props_network_to_analyse,
           repulsion = 0.5, #0.8, the lower you go 
           rmSingles = TRUE,
           cexLables = 1.3,
+          posCol = "#2A6F97", # "darkturquoise" or "#2A6F97"
+          negCol = "#FF2400", # "orange"
           nodeSizeSpread = 3,
           cexNodes = 2,
           title1 = "Network on genus level with choosen associations", 
           showTitle = TRUE,
           cexTitle = 2.1,
           cexLabels = 1.5)
-
+###############################
 legend(0.7, 1.1, cex = 1, title = "estimated association:",
-       legend = c("+","-"), lty = 1, lwd = 3, col = c("#009900","red"), 
+       legend = c("+","-"), lty = 1, lwd = 3, col = c("#2A6F97","#FF2400"), 
        bty = "n", horiz = TRUE)
 
-#Snowflake plots 
-
-# Snowflake visualisation 
-```{r}
-devtools::load_all("scripts/Snowflake")
-library(jsonlite)
-library(webshot)
-Object_For_Snowflake <-ps_work
-
-#generate the microbiome composition object:
-# You can define a specific beta divesity metric to later use to colour in the source nodes:unifrac 
-MCG_Snowflake<- build_mc_graph(ps_object = Object_For_Snowflake, beta_dist = "wunifrac")
-#Differet visualisation methods:
-set.seed(12)
-# Colour in the source nodes with information with regard to the alfa diversity
-forceGraph(graph_object = MCG_Snowflake, source_color = "alphaObserved", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
-
-# Colour in the source nodes with information with regard to the beta diversity ordination (bray curtis in this case)
-forceGraph(graph_object = MCG_Snowflake, source_color = "beta", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
-
-temp_mcg <- MCG_Snowflake
-  
-  
-# Colour in the source nodes by setting a specific variable as the grouping varriable
-temp_mcg$nodes$group <- temp_mcg_version1$nodes$timepoint
-
-# Make sure to include both the groupingVariable = "group", source_color = "group" arguments, otherwise it won't work
-
-forceGraph(graph_object = temp_mcg, groupingVariable = "group", source_color = "group", target_color = "abundance", nodeTitle = c("group","id", "genus", "abundance"), linkStroke = "#DEE2E6")
-
-###
-```
-```{r}
-
-
-
-```
-
-
-```{r}
-devtools::load_all("scripts/Snowflake")
-set.seed(12)
-#Object_For_Snowflake <-ps_work
-# 1. Build the graph object normally
-#MCG_Snowflake<- build_mc_graph(ps_object = Object_For_Snowflake, beta_dist = "wunifrac")
-
-#Add a grouping varriable for plotting
-MCG_Snowflake$nodes$group <- MCG_Snowflake$nodes$timepoint
-library(htmltools)
-# Define your save path
-save_path <- "results/Snowflake_Results"
-if (!dir.exists(save_path)) dir.create(save_path, recursive = TRUE)
-#Different ways of filtering out the 'Target Genera'
-        # 1. Filter for genera found in > 1 sample
-        multi_sample_nodes <- MCG_Snowflake$nodes[
-          !is.na(MCG_Snowflake$nodes$genus) & MCG_Snowflake$nodes$observedIn > 6, 
-        ]
-        target_genera <- names(sort(table(multi_sample_nodes$genus), decreasing = TRUE))
-        # 2. Filter for genera found in a certain abundance cutoff
-        abudant_genera_nodes <- MCG_Snowflake$nodes[
-          !is.na(MCG_Snowflake$nodes$genus) & MCG_Snowflake$nodes$abundance > 0.001, 
-        ]
-        target_genera <- names(sort(table(abudant_genera_nodes$genus), decreasing = TRUE))
-
-# 3. Create the Grid HTML 
-# We remove the background and shadows to keep the immage clean for editing
-grid_items <- lapply(target_genera, function(g_name) {
-  highlight_vector <- c("p1","p2","p3","p4","p5", g_name)
-  
-  p <- forceGraph(
-    graph_object = MCG_Snowflake,
-    target_color = highlight_vector,groupingVariable = "group", source_color = "group",
-    nodeTitle = c("id", "abundance", "genus", "Sample_NAME")
-  )
-  tags$div(
-    style = "display: inline-flex; 
-             flex-direction: column; 
-             align-items: left; 
-             justify-content: center; 
-             width: 44%; 
-             margin: 1%; 
-             vertical-align: top;
-             horizonatal-align: left;
-             background: white; position: relative;",
-    tags$h4(g_name, style = "font-family: sans-serif; text-align: center;align-items: center"),
-    p
-  )
-})
-
-html_grid <- tags$div(
-  style = "width: 1800px; background: grey;align-items: center",
-  tagList(grid_items)
+# Save the object in PDF format with dynamic labeling based on the main settings
+# Now we save the plots (dynamic label based on network construction parameters:  Just copy past the things in between the ###############################, because this is dependent on each final plot
+pdf(file = paste0("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_", network_association_method,"_",network_tax_level, "_",network_Distance_Properties , ".pdf"),
+  width = 20,
+  height = 10
 )
-
-# 4. Save Temp HTML
-temp_html <- file.path(save_path, "temp_for_svg.html")
-save_html(html_grid, temp_html)
-
-# 5. Export to png
-# webshot2 uses Chromium to render the page and can export directly to SVG
-webshot(
-  url = temp_html,
-  file = file.path(save_path, "Snowflake_Final_Figure.png"),
-  vwidth = 1750,
-  vheight = 1600, delay = 5
-)
-
-message("PNG Figure saved to: ", file.path(save_path, "Snowflake_Final_Figure.png"))
-
-```
-
-
-
-
-
-
+plot_network <- plot(props_network_to_analyse, 
+          labelScale = FALSE,
+          nodeColor = "cluster",  
+          nodeSize = "eigenvector", #"eigenvector"
+          repulsion = 0.5, #0.8, the lower you go 
+          rmSingles = TRUE,
+          cexLables = 1.3,
+          posCol = "#2A6F97", # "darkturquoise" or "#2A6F97"
+          negCol = "#FF2400", # "orange"
+          nodeSizeSpread = 3,
+          cexNodes = 2,
+          title1 = "Network on genus level with choosen associations", 
+          showTitle = TRUE,
+          cexTitle = 2.1,
+          cexLabels = 1.5)
+dev.off()
 
 ```
-# Plotting with phylum information
+
+# Plotting the network with phylum information
 ```{r}
-network_to_analyse <- network_proportionality_based
 props_network_to_analyse <- netAnalyze(network_to_analyse, 
                            centrLCC = TRUE, 
                            weightDeg = TRUE,
@@ -1237,268 +822,384 @@ plot(props_network_to_analyse,
      title1 = "Network on genus level with Pearson correlations", 
      showTitle = TRUE,
      cexTitle = 2.3)
-# color them on cluster
-plot(props_network_to_analyse,
-     layout = "spring",
-     repulsion = 0.4,
-     shortenLabels = "none",
-     charToRm = "g__",
-     labelScale = FALSE,
-     rmSingles = TRUE,
-     nodeSize = "clr", # eigenvector, clr
-     nodeSizeSpread = 4,
-     nodeColor = "cluster",
-     posCol = "#2A6F97", # "darkturquoise" or "#2A6F97"
-     negCol = "#FF2400", # "orange"
-     edgeTranspLow = 15,
-     edgeTranspHigh = 40,
-     cexNodes = 1.3,
-     cexLabels = 1.3,
-     cexHubLabels = 1.8,
-     title1 = "Network on genus level with Pearson correlations", 
-     showTitle = TRUE,
-     cexTitle = 2.3)
-# ==================== DRAW THE LEGENDS ====================
+## color them on cluster
+#plot(props_network_to_analyse,
+#     layout = "spring",
+#     repulsion = 0.4,
+#     shortenLabels = "none",
+#     charToRm = "g__",
+#     labelScale = FALSE,
+#     rmSingles = TRUE,
+#     nodeSize = "clr", # eigenvector, clr
+#     nodeSizeSpread = 4,
+#     nodeColor = "cluster",
+#     posCol = "#2A6F97", # "darkturquoise" or "#2A6F97"
+#     negCol = "#FF2400", # "orange"
+#     edgeTranspLow = 15,
+#     edgeTranspHigh = 40,
+#     cexNodes = 1.3,
+#     cexLabels = 1.3,
+#     cexHubLabels = 1.8,
+#     title1 = "Network on genus level with Pearson correlations", 
+#     showTitle = TRUE,
+#     cexTitle = 2.3)
+## ==================== DRAW THE LEGENDS ====================
+#
+## Allow plotting slightly into the margins
+#par(xpd = TRUE) 
+#
+## Phylum Legend: Nudged left (-1.3), up (1.4), and vertically compressed (y.intersp = 0.7)
+#legend(-1.3, 1.4, 
+#       cex = 0.8,                 # Slightly smaller text to keep it tidy
+#       pt.cex = 1.2, 
+#       title = "Phylum:",        
+#       legend = levels(phyla_grouped), 
+#       col = phylcol_transp, 
+#       bty = "n", 
+#       pch = 16,
+#       y.intersp = 0.7)           # Squeezes the 11 items vertically so they don't hit the nodes!
+#
+## Association Legend: Nudged right (0.6) and up (1.4) to match the left side
+#legend(0.6, 1.4, 
+#       cex = 0.8,                 # Kept at 0.8 to match the Phylum legend scale
+#       title = "Estimated association:",
+#       legend = c("+","-"), 
+#       lty = 1, 
+#       lwd = 3, 
+#       col = c("darkturquoise","orange"), 
+#       bty = "n", 
+#       horiz = TRUE,
+#       x.intersp = 0.8)           # Squeezes the horizontal spacing slightly
+#
+## Reset plotting boundaries back to default
+#par(xpd = FALSE)
+#
+```
 
-# Allow plotting slightly into the margins
-par(xpd = TRUE) 
 
-# Phylum Legend: Nudged left (-1.3), up (1.4), and vertically compressed (y.intersp = 0.7)
-legend(-1.3, 1.4, 
-       cex = 0.8,                 # Slightly smaller text to keep it tidy
-       pt.cex = 1.2, 
-       title = "Phylum:",        
-       legend = levels(phyla_grouped), 
-       col = phylcol_transp, 
-       bty = "n", 
-       pch = 16,
-       y.intersp = 0.7)           # Squeezes the 11 items vertically so they don't hit the nodes!
 
-# Association Legend: Nudged right (0.6) and up (1.4) to match the left side
-legend(0.6, 1.4, 
-       cex = 0.8,                 # Kept at 0.8 to match the Phylum legend scale
-       title = "Estimated association:",
-       legend = c("+","-"), 
-       lty = 1, 
-       lwd = 3, 
-       col = c("darkturquoise","orange"), 
-       bty = "n", 
-       horiz = TRUE,
-       x.intersp = 0.8)           # Squeezes the horizontal spacing slightly
 
-# Reset plotting boundaries back to default
-par(xpd = FALSE)
+# 6 Differential_abundance_LinDA.R
+
+## 6.1 Generating the object for LinDA analysis
+### We use the filtered and non normalised phyloseq object, since LinDA handels the normalisation
+### To make plots readable agglomerate at the selected phylogenetic level and make the levels unique
+### select the phylogenetic level to what the taxa should be agglomerated. And you can make a selection of the metadata which needs to be included in the analysis
+
+```{r,message = FALSE, warning = FALSE}
+config <- yaml::read_yaml(config_path)
+
+# LinDA Analysis Preprocessing Parameters
+linda_params <- list(
+  # --- Input Data & Pre-processing ---
+  ps_input           = ps_work,
+  skip_preprocessing  = FALSE, # TRUE: Load cached object | FALSE: Process from ps_input
+  cache_path         = "Objects_Generated_In_Pipeline/LinDA/ps_linda_agglomerated_renamed.rds",
+  
+  # --- Subsampling (Optional testing/debugging cap) ---
+  subsample_input    = FALSE, # TRUE: Limit initial ps_input to first N samples for testing
+  subsample_n        = 100,   # Number of samples to retain if subsample_input = TRUE
+  
+  # --- Taxonomy Settings ---
+  tax_level          = config$Differential_Abundance$target_level, # e.g., "genus"
+  
+  # --- Sample Subsetting (2-Layer Metadata Filters) ---
+  # Layer 1: Primary filter
+  filter1_var        = "timepoint",
+  filter1_val        = c("T0", "T1", "T2", "T3","T4", "T5", "T6", "T7", "T8"),
+  
+  # Layer 2: Secondary filter (Set filter2_var = NULL to disable)
+  filter2_var        = NULL,
+  filter2_val        = c("CW_2"),
+  
+  # --- Taxa Filtering ---
+  min_prevalence     = 0.0, # Retain taxa present in >= 10% of subset samples (0.0 to disable)
+  
+  # --- Metadata Formatting ---
+  categ_env_variables = config$Differential_Abundance$categ_env_variables,
+  numeric_env_variables = config$Differential_Abundance$numeric_env_variables,
+  
+  # --- Output Caching ---
+  save_final_rds     = TRUE,
+  final_rds_path     = "Objects_Generated_In_Pipeline/LinDA/ps_for_linda_analysis.rds"
+)
+
+# Run external modular script
+source(config$scripts$linda_prepare)
+```
+
+In this script we do a differential abundance analysis. In the following chunk calculations are made.
+```{r, input script for LinDA here the model is defined and differental abundance calculations are done}
+config <- yaml::read_yaml(config_path)
+# =====================================================================
+# 7. Running LinDA Differential Abundance Analysis
+# =====================================================================
+# ---------------------------------------------------------------------
+# Step 1. Extract & Align Matrices from Pre-processed Object
+# ---------------------------------------------------------------------
+message("Extracting data from 'ps_for_linda_analysis'...")
+
+# 1a. Extract metadata table
+linda_metadata <- data.frame(sample_data(ps_for_linda_analysis))
+
+# 1b. Extract OTU/ASV table and enforce Taxa-as-Rows
+otu_tab <- as(otu_table(ps_for_linda_analysis), "matrix")
+if (!taxa_are_rows(ps_for_linda_analysis)) {
+  otu_tab <- t(otu_tab)
+  message("Transposed OTU table: LinDA requires taxa as rows.")
+}
+
+# 1c. Replace raw sequence rownames with the formatted unique taxonomic labels
+target_tax_level <- config$Differential_Abundance$target_level
+
+if (!is.null(tax_table(ps_for_linda_analysis, errorIfNULL = FALSE))) {
+  tax_df <- as.data.frame(tax_table(ps_for_linda_analysis))
+  
+  if (target_tax_level %in% colnames(tax_df)) {
+    # Extract the unique renamed labels at the target rank (e.g. Family/Genus)
+    unique_tax_names <- tax_df[[target_tax_level]]
+    
+    # Handle any potential NA or blank taxonomy entries safely
+    unique_tax_names[is.na(unique_tax_names) | unique_tax_names == ""] <- rownames(tax_df)[is.na(unique_tax_names) | unique_tax_names == ""]
+    
+    # Apply unique tax names to OTU table rows
+    rownames(otu_tab) <- unique_tax_names
+    message("Successfully mapped OTU table rownames to formatted taxonomic level: ", target_tax_level)
+  } else {
+    warning("Target level '", target_tax_level, "' not found in tax_table. Keeping default feature IDs.")
+  }
+}
+# ---------------------------------------------------------------------
+# Step 2. Model Setup & Reference Leveling
+# ---------------------------------------------------------------------
+l_mod <- config$Differential_Abundance$model
+
+# 2a. Format formula string cleanly
+linda_formula_string <- paste(l_mod$formula, collapse = "")
+message("Model formula: ~ ", linda_formula_string)
+
+# 2b. Set reference level dynamically for the main variable
+main_var <- l_mod$main_var
+ref_group <- l_mod$ref_group
+
+if (!is.null(main_var) && main_var %in% colnames(linda_metadata)) {
+  linda_metadata[[main_var]] <- relevel(
+    factor(linda_metadata[[main_var]]), 
+    ref = ref_group
+  )
+  message(sprintf("Set reference level for '%s' to '%s'", main_var, ref_group))
+} else {
+  warning("Main variable not found in metadata or not specified in config.")
+}
+
+# 2c. Ensure random intercept / blocking variables are strictly factors
+# You can add any specific random effect columns to this list:
+random_effect_cols <- c("CW_number_MF_number") 
+
+for (re_col in random_effect_cols) {
+  if (re_col %in% colnames(linda_metadata)) {
+    linda_metadata[[re_col]] <- factor(linda_metadata[[re_col]])
+    message("Enforced factor classification for random effect: ", re_col)
+  }
+}
+
+# ---------------------------------------------------------------------
+# Step 3. Execute LinDA
+# ---------------------------------------------------------------------
+l_params <- config$Differential_Abundance$params
+
+message("Running LinDA model...")
+
+linda_res <- linda(
+  feature.dat      = otu_tab, 
+  meta.dat         = linda_metadata, 
+  formula          = linda_formula_string,
+  feature.dat.type = "count",
+  prev.filter      = l_params$prev_filter,  # Often set to 0 here if already filtered in Step 6
+  is.winsor        = TRUE,
+  outlier.pct      = l_params$outlier_pct,
+  zero.handling    = l_params$zero_handling,
+  pseudo.cnt       = l_params$pseudo_cnt,
+  alpha            = l_params$alpha,
+  p.adj.method     = l_params$p_adj_method
+)
+
+# ---------------------------------------------------------------------
+# Step 4. Save Output for Plotting / Downstream Analysis
+# ---------------------------------------------------------------------
+# Assign to global workspace
+assign("linda_res", linda_res, envir = .GlobalEnv)
+
+# Optional: Cache the model results so you don't have to re-fit just to change a plot
+linda_output_path <- "Objects_Generated_In_Pipeline/LinDA/linda_res_model_output.rds"
+dir.create(dirname(linda_output_path), recursive = TRUE, showWarnings = FALSE)
+saveRDS(linda_res, file = linda_output_path)
+
+message("LinDA analysis complete! Results saved to workspace as 'linda_res' and cached to: ", linda_output_path)
+
+```
+## 6.2 Plotting the Linda results
+The interpretation of these results must be done carefully depending on the Linda input, Think about the model formula, and reference level since these will be essential in interpreting the output
+
+For example, if you are working with a model which includes an interaction term. If you specify the reference group as above groundwater, then if you plot the 'SUM.PAHs..EPA.' then you will get how the bacteria differ in log fold change as if the conditions were above groundwater. 
+
+Now if we are interested in how the bacteria differ in log fold changes with respect to PAH level below groundwater level, we need to change the reference group to below groundwater level to base the model on.
+
+There is the possibility: "Groundwater_levelbelow:SUM.PAHs..EPA." which will indicate how the taxa 'respond to PAH levels below groundwater level' but the interaction term changes the interpretation greatly. So be carefull with the interpretation.
+```{r plot LinDA results, fig.width=config$Differential_Abundance$plotting$fig_width, fig.height=config$Differential_Abundance$plotting$fig_height}
+config <- yaml::read_yaml(config_path)
+
+# Extract plot variable dynamically from YAML config
+var_to_plot <- config$Differential_Abundance$plotting$var_to_plot
+
+# Display available effect names to confirm match
+message("Available LinDA output effects:")
+print(names(linda_res$output))
+
+if (!var_to_plot %in% names(linda_res$output)) {
+  stop(sprintf("Configured 'var_to_plot' ('%s') was not found in linda_res$output.", var_to_plot))
+}
+
+# Run external visualization script
+source(config$scripts$linda_plot)
+```
+
+## 6.9 Small chunk of code to test which models are the best, this is just informative
+
+```{r, }
+
+# Calculate your overall Aitchison (Euclidean on CLR) distance matrix
+distance_matrix <- vegdist(t(otu_table(mibi_bmr_clr)), method = "euclidean")
+
+# Model 1: Additive formula (No Interaction)
+permanova_additive <- adonis2(distance_matrix ~ time_continuous + sample_depth_information + 
+                              electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow + concentration_BTEX_ug_l + phosphorus_total, 
+                              data = linda_metadata, permutations = 999)
+
+print(permanova_additive)
+# Model 2: Interaction formula (Time * Depth)
+permanova_interaction <- adonis2(distance_matrix ~ time_continuous * sample_depth_information + 
+                                 electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow + concentration_BTEX_ug_l +phosphorus_total, 
+                                 data = linda_metadata, permutations = 999)
+print(permanova_interaction)
+
 
 ```
 
-Save the plot in a map
+
+
+# 7 Snowflake plots 
+
+## 7.1 Snowflake visualisation 
+
 ```{r}
-# Now we save the plots: 
-pdf("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_spring.pdf", width = 20, height = 10)
+devtools::load_all("scripts/Snowflake")
+library(jsonlite)
+library(webshot)
+# here you define the object of interest :
+Object_For_Snowflake <-ps_work
+Object_For_Snowflake <-ps_object_for_network_analysis #slightly trimmed object for 
+#generate the microbiome composition object:
+# You can define a specific beta divesity metric to later use to colour in the source nodes:unifrac 
+MCG_Snowflake<- build_mc_graph(ps_object = Object_For_Snowflake, beta_dist = "wunifrac")
 
-plot(props_network_to_analyse, 
-          labelScale = FALSE,
-          nodeColor = "cluster", 
-          nodeSize = "eigenvector",
-          repulsion = 0.8,
-          rmSingles = TRUE,
-          cexLables = 1.5,
-          nodeSizeSpread = 3,
-          cexNodes = 2,
-          title1 = "Network on genus level with SPRING associations", 
-          showTitle = TRUE,
-          cexTitle = 2.1,
-          cexLabels = 1.5)
-dev.off()
+#Differet visualisation methods:
+set.seed(12)
+# Colour in the source nodes with information with regard to the alfa diversity
+forceGraph(graph_object = MCG_Snowflake, source_color = "alphaObserved", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
 
+# Colour in the source nodes with information with regard to the beta diversity ordination (bray curtis in this case)
+forceGraph(graph_object = MCG_Snowflake, source_color = "beta", target_color = "observedIn", nodeTitle = c("id", "genus", "abundance"), linkStroke = "#DEE2E6")
 
+temp_mcg <- MCG_Snowflake
+  
+  
+# Colour in the source nodes by setting a specific variable as the grouping varriable
+temp_mcg$nodes$group <- temp_mcg_version1$nodes$timepoint
+
+# Make sure to include both the groupingVariable = "group", source_color = "group" arguments, otherwise it won't work
+
+forceGraph(graph_object = temp_mcg, groupingVariable = "group", source_color = "group", target_color = "abundance", nodeTitle = c("group","id", "genus", "abundance"), linkStroke = "#DEE2E6")
+
+###
 ```
 
-
-
-
-
-# 8.2 Microbial network analysis: analyzing the generated network
+## 7.2 Snowflake visualisation large overview figure html format
 ```{r}
+devtools::load_all("scripts/Snowflake")
+set.seed(12)
+#Object_For_Snowflake <-ps_work
+# 1. Build the graph object normally
+#MCG_Snowflake<- build_mc_graph(ps_object = Object_For_Snowflake, beta_dist = "wunifrac")
 
-#help("netAnalyze")
+#Add a grouping varriable for plotting
+MCG_Snowflake$nodes$group <- MCG_Snowflake$nodes$timepoint
+library(htmltools)
+# Define your save path
+save_path <- "results/Snowflake_Results"
+if (!dir.exists(save_path)) dir.create(save_path, recursive = TRUE)
+#Different ways of filtering out the 'Target Genera'
+        # 1. Filter for genera found in > 1 sample
+        multi_sample_nodes <- MCG_Snowflake$nodes[
+          !is.na(MCG_Snowflake$nodes$genus) & MCG_Snowflake$nodes$observedIn > 6, 
+        ]
+        target_genera <- names(sort(table(multi_sample_nodes$genus), decreasing = TRUE))
+        # 2. Filter for genera found in a certain abundance cutoff
+        abudant_genera_nodes <- MCG_Snowflake$nodes[
+          !is.na(MCG_Snowflake$nodes$genus) & MCG_Snowflake$nodes$abundance > 0.001, 
+        ]
+        target_genera <- names(sort(table(abudant_genera_nodes$genus), decreasing = TRUE))
 
+# 3. Create the Grid HTML 
+# We remove the background and shadows to keep the immage clean for editing
+grid_items <- lapply(target_genera, function(g_name) {
+  highlight_vector <- c("p1","p2","p3","p4","p5", g_name)
+  
+  p <- forceGraph(
+    graph_object = MCG_Snowflake,
+    target_color = highlight_vector,groupingVariable = "group", source_color = "group",
+    nodeTitle = c("id", "abundance", "genus", "Sample_NAME")
+  )
+  tags$div(
+    style = "display: inline-flex; 
+             flex-direction: column; 
+             align-items: left; 
+             justify-content: center; 
+             width: 44%; 
+             margin: 1%; 
+             vertical-align: top;
+             horizonatal-align: left;
+             background: white; position: relative;",
+    tags$h4(g_name, style = "font-family: sans-serif; text-align: center;align-items: center"),
+    p
+  )
+})
 
-##########
+html_grid <- tags$div(
+  style = "width: 1800px; background: grey;align-items: center",
+  tagList(grid_items)
+)
 
-#summary.microNetProps
-summary(props_spring, numbNodes = 5L)
-p <- plot(props_spring, 
-          labelScale = FALSE,
-          nodeColor = "cluster", 
-          nodeSize = "eigenvector",
-          repulsion = 0.8,
-          rmSingles = TRUE,
-          cexLables = 1.3,
-          nodeSizeSpread = 3,
-          cexNodes = 2,
-          title1 = "Network on genus level with SPRING associations", 
-          showTitle = TRUE,
-          cexTitle = 2.1,
-          cexLabels = 1.5)
+# 4. Save Temp HTML
+temp_html <- file.path(save_path, "temp_for_svg.html")
+save_html(html_grid, temp_html)
 
-legend(0.7, 1.1, cex = 1, title = "estimated association:",
-       legend = c("+","-"), lty = 1, lwd = 3, col = c("#009900","red"), 
-       bty = "n", horiz = TRUE)
+# 5. Export to png
+# webshot2 uses Chromium to render the page and can export directly to SVG
+webshot(
+  url = temp_html,
+  file = file.path(save_path, "Snowflake_Final_Figure.png"),
+  vwidth = 1750,
+  vheight = 1600, delay = 5
+)
 
-
-# Now we save the plots: pls write a script to do this: 
-pdf("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_spring.pdf", width = 20, height = 10)
-
-plot(props_spring, 
-          labelScale = FALSE,
-          nodeColor = "cluster", 
-          nodeSize = "eigenvector",
-          repulsion = 0.8,
-          rmSingles = TRUE,
-          cexLables = 1.5,
-          nodeSizeSpread = 3,
-          cexNodes = 2,
-          title1 = "Network on genus level with SPRING associations", 
-          showTitle = TRUE,
-          cexTitle = 2.1,
-          cexLabels = 1.5)
-
-dev.off()
-
-# 
-
-# For Gephi, we have to generate an edge list with IDs.
-# The corresponding labels (and also further node features) are stored as node list.
-
-# Create edge object from the edge list exported by netConstruct()
-edges <- dplyr::select(net_spring$edgelist1, v1, v2)
-
-# Add Source and Target variables (as IDs)
-edges$Source <- as.numeric(factor(edges$v1))
-edges$Target <- as.numeric(factor(edges$v2))
-edges$Type <- "Undirected"
-edges$Weight <- net_spring$edgelist1$adja
-
-nodes <- unique(edges[,c('v1','Source')])
-colnames(nodes) <- c("Label", "Id")
-
-# Add category with clusters (can be used as node colors in Gephi) Here you can select some node characteristics to take out to make a better plot in gephi
-nodes$Category <- props_spring$clustering$clust1[nodes$Label]
-
-edges <- dplyr::select(edges, Source, Target, Type, Weight)
-
-write.csv(nodes, file = "Objects_Generated_In_Pipeline/Network_Analysis/Exporting_To_Gephi/nodes.csv", row.names = FALSE)
-write.csv(edges, file = "Objects_Generated_In_Pipeline/Network_Analysis/Exporting_To_Gephi/edges.csv", row.names = FALSE)
-
-#Network with Pearson correlation as association measure 
-net_pears <- netConstruct(ps_prevalence_filtered,  
-                          measure = "pearson",
-                          normMethod = "clr",
-                          filtTax = "highestFreq",
-                          group = as.character(phyloseq::sample_data(ps_prevalence_filtered)$sample_depth_information),
-                          taxRank = "genus",
-                          filtTaxPar = list( highestFreq = 50),
-                          zeroMethod = "multRepl",
-                          sparsMethod = "threshold",
-                          thresh = 0.3,
-                          verbose = 3)
-
-props_pears <- netAnalyze(net_pears, 
-                          clustMethod = "cluster_fast_greedy")
-
-
-plot(props_pears, 
-     nodeColor = "cluster", 
-     nodeSize = "eigenvector",
-     repulsion = 0.8,
-     rmSingles = TRUE,
-     labelScale = FALSE,
-     cexLables = 1.3,
-     nodeSizeSpread = 3,
-     cexNodes = 2,
-     title1 = "Network on genus level with Pearson correlations", 
-     showTitle = TRUE,
-     cexTitle = 2.3)
-
-legend(0.7, 1.1, cex = 2.2, title = "estimated correlation:", 
-       legend = c("+","-"), lty = 1, lwd = 3, col = c("#009900","red"), 
-       bty = "n", horiz = TRUE)
-
-
-pdf("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_pearson.pdf", width = 20, height = 10)
-
-plot(props_pears, 
-     nodeColor = "cluster", 
-     nodeSize = "eigenvector",
-     repulsion = 0.8,
-     rmSingles = TRUE,
-     labelScale = FALSE,
-     cexLables = 1.3,
-     nodeSizeSpread = 3,
-     cexNodes = 2,
-     title1 = "Network on genus level with Pearson correlations", 
-     showTitle = TRUE,
-     edgeInvisFilter = "threshold", #if you want to filter out some of the edges, make them invisible
-     edgeInvisPar = 0.5,
-     cexTitle = 2.3)
-
-dev.off()
-
-
-```
-Correlation based networks: SParCC
-```{r}
-
-
-
-plot(props_SparCC, 
-     nodeColor = "cluster", 
-     nodeSize = "eigenvector",
-     repulsion = 0.8,
-     rmSingles = TRUE,
-     labelScale = FALSE,
-     cexLables = 1.3,
-     nodeSizeSpread = 3,
-     cexNodes = 2,
-     title1 = "Network on genus level with Pearson correlations", 
-     showTitle = TRUE,
-     cexTitle = 2.3)
-
-legend(0.7, 1.1, cex = 2.2, title = "estimated correlation:", 
-       legend = c("+","-"), lty = 1, lwd = 3, col = c("#009900","red"), 
-       bty = "n", horiz = TRUE)
-
-
-pdf("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_SparCC.pdf", width = 20, height = 10)
-
-plot(props_SparCC, 
-     nodeColor = "cluster", 
-     nodeSize = "eigenvector",
-     repulsion = 0.8,
-     rmSingles = TRUE,
-     labelScale = FALSE,
-     cexLables = 1.3,
-     nodeSizeSpread = 3,
-     cexNodes = 2,
-     title1 = "Network on genus level with SParCC correlations", 
-     showTitle = TRUE,
-     edgeInvisFilter = "threshold", #if you want to filter out some of the edges, make them invisible
-     edgeInvisPar = 0.5,
-     cexTitle = 2.3)
-
-dev.off()
-
+message("PNG Figure saved to: ", file.path(save_path, "Snowflake_Final_Figure.png"))
 
 ```
 
 
-
-
-
-
-#TAX4FUN Section
-## 7.1 Functional assignment using tax4fun
+#10 TAX4FUN Section
+## 10.1 Functional assignment using tax4fun
 ### This chunk of code, is used for doing the functional assignment, which is ran in the 09_1_Tax4Fun_object_generation.R script. Run this one time per dataset, since this takes a lot of time 
 Chunk of code to for tax4fun_object_generation, this step takes time so run once per dataset and then load in the objects during the analysis
 ```{r, results= 'hide'}
@@ -1516,7 +1217,8 @@ num_of_threads  = 2                             # number of CPU cores to use, pl
 #when you want to run the analysis, uncheck this #
 #source(config$scripts$tax4fun_object_generation)
 ```
-## 7.2 Filtering out the KO's of interest for further analysis
+
+## 10.2 Filtering out the KO's of interest for further analysis
 ### This chunk of code, you can take out the information generated by the tax4fun function. And select in which collumns you are interested in, this filters the Kegg orthology pathways you are interested in, which in the end can be linked as data to your phyloseq data.
 ```{r, results= 'hide'}
 config <- yaml::read_yaml(config_path)
@@ -1541,7 +1243,7 @@ wanted_categories_level_2 <- c(
 #run the filtering script
 source(config$scripts$tax4fun_object_filtering)
 ```
-## 7.3 Data object generation for analysis and visualization of the filtered data table
+## 10.3 Data object generation for analysis and visualization of the filtered data table
 Functional assignment using tax4funNow we have filtered out the pathways of interest, now we can go to data analysis and plotting. 
 ```{r}
 # now we will create a table which can be used for further data visualisation and plotting, and could be added to the metadata already present:

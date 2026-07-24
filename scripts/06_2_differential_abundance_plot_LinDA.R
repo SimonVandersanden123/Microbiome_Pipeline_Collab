@@ -19,6 +19,9 @@ if (!var_to_plot %in% names(linda_res$output)) {
 
 # 2. Extract raw statistics directly bypassing the restrictive 'linda.plot()' engine
 raw_metrics <- linda_res$output[[var_to_plot]]
+# 2.1 Define the colours for the positive and negative values for the logratio
+color_positive ="#2A6F97"
+color_negative ="#FF2400"
 
 # 3. Format matrix rows into an accessible data frame matching standard plot metrics
 plot_data_clean <- data.frame(
@@ -46,7 +49,7 @@ if (nrow(plot_data_clean) == 0) {
       ymax = Log2FoldChange + lfcSE,
       color = Log2FoldChange < 0
     ), size = 0.6) +
-    scale_color_manual(values = c("FALSE" = colour_positive, "TRUE" = colour_negative)) + # Safe distinct ecological colors
+    scale_color_manual(values = c("FALSE" = color_positive, "TRUE" = color_negative)) + # Safe distinct ecological colors
     coord_flip() +
     theme_minimal() +
     labs(
