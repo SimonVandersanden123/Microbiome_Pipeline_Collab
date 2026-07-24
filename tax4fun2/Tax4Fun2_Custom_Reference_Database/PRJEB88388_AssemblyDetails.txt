@@ -1,0 +1,323 @@
+# PRJEB88388 Assembly Details
+# Assembly	Level	WGS	Chrs	BioSample	Strain	Taxonomy
+GCA_976987165.1	Complete genome	undefined	1	SAMEA120301452	R-90029	Achromobacter aegrifaciens	
+GCA_977004945.1	Contig	CDRMMM000000000	undefined	SAMEA120322883	R-92758	Achromobacter aegrifaciens	
+GCA_977004935.1	Contig	CDRMMN000000000	undefined	SAMEA120322880	R-92754	Achromobacter aegrifaciens	
+GCA_976997215.1	Contig	CDRLMR000000000	undefined	SAMEA120314575	R-92592	Achromobacter aegrifaciens	
+GCA_976997135.1	Contig	CDRLMP000000000	undefined	SAMEA120314566	R-92577	Achromobacter aegrifaciens	
+GCA_976997365.1	Contig	CDRLNB000000000	undefined	SAMEA120314561	R-92570	Achromobacter aloeverae	
+GCA_976987145.1	Complete genome	undefined	1	SAMEA120301453	R-90030	Achromobacter kerstersii	
+GCA_976996395.1	Complete genome	undefined	1	SAMEA120311192	R-91782	Achromobacter kerstersii	
+GCA_977007435.1	Contig	CDRMVA000000000	undefined	SAMEA120325668	R-92753	Achromobacter kerstersii	
+GCA_977007375.1	Contig	CDRMUW000000000	undefined	SAMEA120325667	R-92749	Achromobacter kerstersii	
+GCA_977008235.1	Contig	CDRMWX000000000	undefined	SAMEA120356377	R-93406	Achromobacter marplatensis	
+GCA_976996005.1	Contig	CDRLLA000000000	undefined	SAMEA120311186	R-91484	Achromobacter pestifer	
+GCA_977004745.1	Contig	CDRMMF000000000	undefined	SAMEA120322941	R-91897	Achromobacter pestifer	
+GCA_977007215.1	Complete genome	undefined	1	SAMEA120325694	R-92735	Achromobacter spanius	
+GCA_977010995.1	Complete genome	undefined	1	SAMEA120373775	R-93080	Achromobacter xylosoxidans	
+GCA_976989025.1	Contig	CDRKIQ000000000	undefined	SAMEA120308858	R-90754	Acinetobacter calcoaceticus	
+GCA_976988995.1	Contig	CDRKIP000000000	undefined	SAMEA120308857	R-90014	Acinetobacter calcoaceticus	
+GCA_976989145.1	Contig	CDRKIV000000000	undefined	SAMEA120308849	R-88257	Acinetobacter pittii	
+GCA_977005015.1	Complete genome	undefined	1	SAMEA120322893	R-92590	Aerococcus viridans	
+GCA_976989045.1	Contig	CDRKIS000000000	undefined	SAMEA120308862	R-90757	Agrobacterium burrii	
+GCA_977008025.1	Contig	CDRMWK000000000	undefined	SAMEA120356369	R-93132	Agrobacterium leguminum	
+GCA_977008065.1	Contig	CDRMWL000000000	undefined	SAMEA120356366	R-93129	Agrobacterium leguminum	
+GCA_977010835.1	Contig	CDRNAV000000000	undefined	SAMEA120373773	R-93402	Agromyces bauzanensis	
+GCA_977010825.1	Complete genome	undefined	1	SAMEA120373787	R-93390	Agromyces bauzanensis	
+GCA_976996245.1	Complete genome	undefined	1	SAMEA120311194	R-91691	Agromyces bauzanensis	
+GCA_976989185.1	Contig	CDRKIY000000000	undefined	SAMEA120309488	R-91778	Allobosea beijingensis	
+GCA_977010925.1	Contig	CDRNBB000000000	undefined	SAMEA120373776	R-93125	Ancylobacter moscoviensis	
+GCA_977007105.1	Contig	CDRMUI000000000	undefined	SAMEA120325685	R-93077	Ancylobacter moscoviensis	
+GCA_977008145.1	Contig	CDRMWS000000000	undefined	SAMEA120356361	R-93111	Ancylobacter novellus	
+GCA_977007865.1	Contig	CDRMWH000000000	undefined	SAMEA120356360	R-93092	Ancylobacter novellus	
+GCA_976997125.1	Complete genome	undefined	1	SAMEA120314564	R-92575	Aquipseudomonas campi	
+GCA_976988955.1	Complete genome	undefined	1	SAMEA120308853	R-88271	Aquipseudomonas campi	
+GCA_976997245.1	Contig	CDRLMX000000000	undefined	SAMEA120314650	R-92741	Arthrobacter humicola	
+GCA_977007675.1	Complete genome	undefined	1	SAMEA120226978	R-90796	Bacillus altitudinis	
+GCA_977007745.1	Complete genome	undefined	1	SAMEA120226970	R-90770	Bacillus licheniformis	
+GCA_977007635.1	Contig	CDRMVQ000000000	undefined	SAMEA120226971	R-90773	Bacillus mycoides	
+GCA_976996315.1	Contig	CDRLLC000000000	undefined	SAMEA120311178	R-89998	Bacillus mycoides	
+GCA_977007725.1	Complete genome	undefined	1	SAMEA120226968	R-90763	Bacillus pumilus	
+GCA_977012055.1	Contig	CDRNDB000000000	undefined	SAMEA120399601	R-93116	Bradyrhizobium cenepequi	
+GCA_977008075.1	Contig	CDRMWV000000000	undefined	SAMEA120356358	R-93074	Bradyrhizobium cenepequi	
+GCA_977012035.1	Complete genome	undefined	1	SAMEA120399600	R-93102	Bradyrhizobium cenepequi	
+GCA_977007305.1	Contig	CDRMUS000000000	undefined	SAMEA120325688	R-93086	Bradyrhizobium liaoningense	
+GCA_977007485.1	Complete genome	undefined	1	SAMEA120325677	R-92926	Bradyrhizobium liaoningense	
+GCA_977007395.1	Complete genome	undefined	1	SAMEA120325678	R-92932	Bradyrhizobium liaoningense	
+GCA_977011025.1	Complete genome	undefined	1	SAMEA120373772	R-93401	Brevundimonas bullata	
+GCA_976995775.1	Complete genome	undefined	1	SAMEA120311199	R-91698	Brevundimonas mediterranea	
+GCA_977007145.1	Contig	CDRMUK000000000	undefined	SAMEA120325687	R-93084	Brucella anthropi	
+GCA_977007265.1	Contig	CDRMUR000000000	undefined	SAMEA120325684	R-93063	Brucella anthropi	
+GCA_977007125.1	Contig	CDRMUJ000000000	undefined	SAMEA120325690	R-93096	Brucella anthropi	
+GCA_977011945.1	Contig	CDRNCN000000000	undefined	SAMEA120399605	R-92653	Brucella anthropi	
+GCA_977011915.1	Contig	CDRNCO000000000	undefined	SAMEA120399607	R-92664	Brucella anthropi	
+GCA_977012045.1	Contig	CDRNCQ000000000	undefined	SAMEA120399606	R-92755	Brucella pituitosa	
+GCA_976997225.1	Contig	CDRLMZ000000000	undefined	SAMEA120314604	R-92734	Caulobacter segnis	
+GCA_976997475.1	Contig	CDRLNE000000000	undefined	SAMEA120314598	R-92714	Caulobacter segnis	
+GCA_977007775.1	Complete genome	undefined	1	SAMEA120226985	R-90013	Cellulomonas hominis	
+GCA_977007285.1	Contig	CDRMUP000000000	undefined	SAMEA120325686	R-93083	Cellulosimicrobium protaetiae	
+GCA_976989225.1	Complete genome	undefined	1	SAMEA120309486	R-91772	Chryseobacterium koreense	
+GCA_976989235.1	Complete genome	undefined	1	SAMEA120309489	R-91780	Chryseobacterium koreense	
+GCA_977007965.1	Complete genome	undefined	1	SAMEA120356375	R-93141	Chryseobacterium koreense	
+GCA_977008095.1	Complete genome	undefined	1	SAMEA120356376	R-93142	Chryseobacterium koreense	
+GCA_977011935.1	Contig	CDRNCS000000000	undefined	SAMEA120399596	R-92969	Cupriavidus basilensis	
+GCA_977011955.1	Contig	CDRNCR000000000	undefined	SAMEA120399593	R-92945	Cupriavidus basilensis	
+GCA_976996875.1	Contig	CDRLML000000000	undefined	SAMEA120311187	R-91489	Cupriavidus basilensis	
+GCA_977004925.1	Contig	CDRMML000000000	undefined	SAMEA120322876	R-91474	Cupriavidus basilensis	
+GCA_976996775.1	Contig	CDRLMK000000000	undefined	SAMEA120311180	R-91469	Cupriavidus basilensis	
+GCA_976989205.1	Contig	CDRKJA000000000	undefined	SAMEA120309481	R-91747	Cupriavidus basilensis	
+GCA_976997515.1	Contig	CDRLND000000000	undefined	SAMEA120314595	R-92709	Cupriavidus campinensis	
+GCA_977007275.1	Contig	CDRMUQ000000000	undefined	SAMEA120325689	R-93091	Cupriavidus campinensis	
+GCA_977012075.1	Contig	CDRNCV000000000	undefined	SAMEA120399602	R-92684	Cupriavidus campinensis	
+GCA_976997655.1	Contig	CDRLNH000000000	undefined	SAMEA120314585	R-92680	Cupriavidus nantongensis	
+GCA_976997605.1	Contig	CDRLNO000000000	undefined	SAMEA120314592	R-92703	Cupriavidus necator	
+GCA_976997675.1	Contig	CDRLNM000000000	undefined	SAMEA120314588	R-92694	Cupriavidus necator	
+GCA_977007315.1	Contig	CDRMUT000000000	undefined	SAMEA120325696	R-92745	Cupriavidus necator	
+GCA_977012025.1	Contig	CDRNDA000000000	undefined	SAMEA120399603	R-92686	Cupriavidus necator	
+GCA_977007475.1	Contig	CDRMVB000000000	undefined	SAMEA120325660	R-93106	Cupriavidus pauculus	
+GCA_977004865.1	Contig	CDRMMK000000000	undefined	SAMEA120322945	R-91909	Cupriavidus ulmosensis	
+GCA_977008105.1	Contig	CDRMWP000000000	undefined	SAMEA120356341	R-92313	Cupriavidus ulmosensis	
+GCA_977008205.1	Contig	CDRMWR000000000	undefined	SAMEA120356380	R-93146	Cupriavidus ulmosensis	
+GCA_976989105.1	Complete genome	undefined	1	SAMEA120308851	R-88267	Delftia acidovorans	
+GCA_976989035.1	Complete genome	undefined	1	SAMEA120308864	R-90758	Delftia acidovorans	
+GCA_976989065.1	Complete genome	undefined	1	SAMEA120308854	R-88273	Delftia acidovorans	
+GCA_976987185.1	Complete genome	undefined	1	SAMEA120301455	R-90872	Delftia acidovorans	
+GCA_976995725.1	Contig	CDRLKY000000000	undefined	SAMEA120311175	R-90777	Delftia acidovorans	
+GCA_976988975.1	Contig	CDRKIR000000000	undefined	SAMEA120308855	R-89155	Delftia acidovorans	
+GCA_977010805.1	Contig	CDRNAU000000000	undefined	SAMEA120373782	R-92676	Enterobacter ludwigii	
+GCA_977005075.1	Contig	CDRMMQ000000000	undefined	SAMEA120322882	R-92757	Enterobacter ludwigii	
+GCA_977007245.1	Contig	CDRMUN000000000	undefined	SAMEA120325674	R-92916	Enterobacter mori	
+GCA_977007465.1	Contig	CDRMUZ000000000	undefined	SAMEA120325673	R-92905	Enterobacter mori	
+GCA_977007405.1	Complete genome	undefined	1	SAMEA120325675	R-92920	Enterobacter mori	
+GCA_976997585.1	Complete genome	undefined	1	SAMEA120314573	R-92588	Flavobacterium microcysteis	
+GCA_976997535.1	Complete genome	undefined	1	SAMEA120314570	R-92582	Flavobacterium microcysteis	
+GCA_977012085.1	Contig	CDRNCU000000000	undefined	SAMEA120399610	R-93394	Geopseudomonas aromaticivorans	
+GCA_976996735.1	Contig	CDRLMI000000000	undefined	SAMEA120311176	R-90795	Georgenia muralis	
+GCA_976987175.1	Complete genome	undefined	1	SAMEA120301465	R-90890	Georgenia muralis	
+GCA_977007795.1	Complete genome	undefined	1	SAMEA120226977	R-90026	Georgenia yuyongxinii	
+GCA_976989195.1	Contig	CDRKIZ000000000	undefined	SAMEA120309482	R-91750	Janthinobacterium tructae	
+GCA_977005005.1	Complete genome	undefined	1	SAMEA120322875	R-91514	Klebsiella grimontii	
+GCA_976995975.1	Complete genome	undefined	1	SAMEA120311185	R-91516	Klebsiella grimontii	
+GCA_976995825.1	Complete genome	undefined	1	SAMEA120311181	R-91512	Klebsiella grimontii	
+GCA_976996105.1	Complete genome	undefined	1	SAMEA120311189	R-91517	Klebsiella grimontii	
+GCA_976996025.1	Complete genome	undefined	1	SAMEA120311183	R-91515	Klebsiella grimontii	
+GCA_976996045.1	Complete genome	undefined	1	SAMEA120311182	R-91513	Klebsiella grimontii	
+GCA_976989075.1	Contig	CDRKIO000000000	undefined	SAMEA120308860	R-90756	Kocuria marina	
+GCA_977010865.1	Contig	CDRNBC000000000	undefined	SAMEA120373783	R-92562	Labrys neptuniae	
+GCA_977004985.1	Contig	CDRMMP000000000	undefined	SAMEA120322889	R-92572	Labrys neptuniae	
+GCA_977007295.1	Complete genome	undefined	1	SAMEA120325679	R-92933	Luteibacter jiangsuensis	
+GCA_977007175.1	Complete genome	undefined	1	SAMEA120325676	R-92924	Luteibacter jiangsuensis	
+GCA_977007235.1	Complete genome	undefined	1	SAMEA120325672	R-92898	Luteibacter jiangsuensis	
+GCA_977007705.1	Complete genome	undefined	1	SAMEA120226982	R-90003	Luteibacter yeojuensis	
+GCA_976997415.1	Complete genome	undefined	1	SAMEA120314654	R-92761	Microbacterium forte	
+GCA_976995695.1	Complete genome	undefined	1	SAMEA120311195	R-91692	Microbacterium maritypicum	
+GCA_977010975.1	Complete genome	undefined	1	SAMEA120373771	R-93400	Microbacterium natoriense	
+GCA_976987085.1	Complete genome	undefined	1	SAMEA120301451	R-90860	Microbacterium phyllosphaerae	
+GCA_977010785.1	Contig	CDRNAT000000000	undefined	SAMEA120373780	R-92733	Microbacterium profundi	
+GCA_977008045.1	Complete genome	undefined	1	SAMEA120356357	R-93060	Microbacterium sufflavum	
+GCA_977010895.1	Contig	CDRNAW000000000	undefined	SAMEA120373784	R-92925	Micrococcus luteus	
+GCA_976988965.1	Complete genome	undefined	1	SAMEA120308859	R-90755	Micrococcus luteus	
+GCA_977005095.1	Contig	CDRMMO000000000	undefined	SAMEA120322884	R-92559	Moraxella tetraodonis	
+GCA_977007425.1	Contig	CDRMUV000000000	undefined	SAMEA120325669	R-92762	Moraxella tetraodonis	
+GCA_976997255.1	Contig	CDRLMW000000000	undefined	SAMEA120314651	R-92742	Mucilaginibacter phyllosphaerae	
+GCA_977007805.1	Contig	CDRMVW000000000	undefined	SAMEA120226980	R-90027	Mycolicibacterium lutetiense	
+GCA_976987075.1	Contig	CDRKDF000000000	undefined	SAMEA120301466	R-90034	Neorhizobium petrolearium	
+GCA_977007765.1	Contig	CDRMVT000000000	undefined	SAMEA120226981	R-89996	Novosphingobium lindaniclasticum	
+GCA_976997345.1	Contig	CDRLNA000000000	undefined	SAMEA120314593	R-92706	Paenarthrobacter nitroguajacolicus	
+GCA_976996355.1	Contig	CDRLKZ000000000	undefined	SAMEA120311201	R-91701	Paenirhizobium selenitireducens	
+GCA_976997045.1	Complete genome	undefined	1	SAMEA120314555	R-92558	Pandoraea norimbergensis	
+GCA_976997075.1	Complete genome	undefined	1	SAMEA120314563	R-92573	Pandoraea norimbergensis	
+GCA_977008015.1	Contig	CDRMWU000000000	undefined	SAMEA120356365	R-93128	Paraburkholderia fungorum	
+GCA_977004965.1	Contig	CDRMMT000000000	undefined	SAMEA120322878	R-91497	Paraburkholderia fungorum	
+GCA_977005055.1	Contig	CDRMMU000000000	undefined	SAMEA120322877	R-91495	Paraburkholderia fungorum	
+GCA_977005035.1	Contig	CDRMMV000000000	undefined	SAMEA120322886	R-92561	Paraburkholderia fungorum	
+GCA_977004995.1	Contig	CDRMMS000000000	undefined	SAMEA120322892	R-92583	Paraburkholderia fungorum	
+GCA_977011985.1	Contig	CDRNCZ000000000	undefined	SAMEA120399597	R-92973	Paraburkholderia fungorum	
+GCA_976997115.1	Contig	CDRLMO000000000	undefined	SAMEA120314562	R-92571	Paraburkholderia xenovorans	
+GCA_976997195.1	Contig	CDRLMQ000000000	undefined	SAMEA120314567	R-92578	Paraburkholderia xenovorans	
+GCA_976997205.1	Complete genome	undefined	1	SAMEA120314568	R-92579	Paracnuella aquatica	
+GCA_977007685.1	Complete genome	undefined	1	SAMEA120226984	R-90008	Pedobacter panaciterrae	
+GCA_977007695.1	Contig	CDRMVR000000000	undefined	SAMEA120226973	R-90021	Peribacillus frigoritolerans	
+GCA_977005065.1	Complete genome	undefined	1	SAMEA120322885	R-92560	Polluticoccus soli	
+GCA_977007155.1	Complete genome	undefined	1	SAMEA120325671	R-92586	Polluticoccus soli	
+GCA_977007835.1	Contig	CDRMVV000000000	undefined	SAMEA120226972	R-90778	Priestia megaterium	
+GCA_977007815.1	Contig	CDRMVY000000000	undefined	SAMEA120226975	R-90783	Priestia megaterium	
+GCA_977007785.1	Contig	CDRMVZ000000000	undefined	SAMEA120226983	R-90005	Promicromonospora soli	
+GCA_976997055.1	Contig	CDRLMN000000000	undefined	SAMEA120314560	R-92569	Pseudocnuella soli	
+GCA_976997565.1	Complete genome	undefined	1	SAMEA120314587	R-92687	Pseudomonas abietaniphila	
+GCA_976988945.1	Complete genome	undefined	1	SAMEA120308847	R-88253	Pseudomonas aeruginosa	
+GCA_977007345.1	Contig	CDRMUU000000000	undefined	SAMEA120325658	R-93103	Pseudomonas aeruginosa	
+GCA_976987055.1	Complete genome	undefined	1	SAMEA120301458	R-90876	Pseudomonas atacamensis	
+GCA_977008225.1	Complete genome	undefined	1	SAMEA120356355	R-92873	Pseudomonas azerbaijanoccidentalis	
+GCA_977007365.1	Complete genome	undefined	1	SAMEA120325691	R-92696	Pseudomonas azerbaijanoccidentalis	
+GCA_977008035.1	Complete genome	undefined	1	SAMEA120356356	R-92877	Pseudomonas chlororaphis subsp. aureofaciens	
+GCA_977008195.1	Complete genome	undefined	1	SAMEA120356348	R-92847	Pseudomonas chlororaphis subsp. aureofaciens	
+GCA_976997275.1	Complete genome	undefined	1	SAMEA120314637	R-92789	Pseudomonas chlororaphis subsp. aureofaciens	
+GCA_976997235.1	Complete genome	undefined	1	SAMEA120314641	R-92802	Pseudomonas chlororaphis subsp. aureofaciens	
+GCA_977010845.1	Contig	CDRNAY000000000	undefined	SAMEA120373790	R-93395	Pseudomonas extremaustralis	
+GCA_977004765.1	Contig	CDRMMG000000000	undefined	SAMEA120322937	R-91889	Pseudomonas farris	
+GCA_976987215.1	Contig	CDRKDG000000000	undefined	SAMEA120301456	R-90874	Pseudomonas farris	
+GCA_976987095.1	Contig	CDRKDE000000000	undefined	SAMEA120301463	R-90883	Pseudomonas farris	
+GCA_976997375.1	Complete genome	undefined	1	SAMEA120314640	R-92801	Pseudomonas farris	
+GCA_977010905.1	Complete genome	undefined	1	SAMEA120373778	R-92700	Pseudomonas farris	
+GCA_976997705.1	Complete genome	undefined	1	SAMEA120314639	R-92794	Pseudomonas farris	
+GCA_976987115.1	Complete genome	undefined	1	SAMEA120301459	R-90877	Pseudomonas fjordensis	
+GCA_977008155.1	Complete genome	undefined	1	SAMEA120356346	R-92842	Pseudomonas germanica	
+GCA_977008085.1	Complete genome	undefined	1	SAMEA120356354	R-92872	Pseudomonas germanica	
+GCA_976997695.1	Complete genome	undefined	1	SAMEA120314647	R-92826	Pseudomonas germanica	
+GCA_976997325.1	Complete genome	undefined	1	SAMEA120314634	R-92786	Pseudomonas germanica	
+GCA_976997635.1	Complete genome	undefined	1	SAMEA120314642	R-92803	Pseudomonas germanica	
+GCA_976997685.1	Contig	CDRLNN000000000	undefined	SAMEA120314646	R-92822	Pseudomonas gorinensis	
+GCA_976997715.1	Contig	CDRLNK000000000	undefined	SAMEA120314638	R-92790	Pseudomonas gorinensis	
+GCA_977008255.1	Contig	CDRMWY000000000	undefined	SAMEA120356345	R-92833	Pseudomonas gorinensis	
+GCA_977007905.1	Contig	CDRMWO000000000	undefined	SAMEA120356352	R-92868	Pseudomonas gorinensis	
+GCA_976987125.1	Complete genome	undefined	1	SAMEA120301462	R-90880	Pseudomonas hormoni	
+GCA_977008005.1	Contig	CDRMWN000000000	undefined	SAMEA120356344	R-92830	Pseudomonas hormoni	
+GCA_977007165.1	Contig	CDRMUL000000000	undefined	SAMEA120325681	R-92849	Pseudomonas hormoni	
+GCA_976996665.1	Contig	CDRLLG000000000	undefined	SAMEA120311202	R-91702	Pseudomonas hormoni	
+GCA_976996285.1	Contig	CDRLLE000000000	undefined	SAMEA120311196	R-91693	Pseudomonas hormoni	
+GCA_977007115.1	Complete genome	undefined	1	SAMEA120325683	R-93054	Pseudomonas juntendi	
+GCA_976997665.1	Complete genome	undefined	1	SAMEA120314586	R-92683	Pseudomonas kilonensis	
+GCA_976997525.1	Complete genome	undefined	1	SAMEA120314596	R-92711	Pseudomonas kilonensis	
+GCA_976997455.1	Complete genome	undefined	1	SAMEA120314591	R-92702	Pseudomonas kilonensis	
+GCA_977007915.1	Complete genome	undefined	1	SAMEA120356371	R-93134	Pseudomonas lini	
+GCA_977007895.1	Complete genome	undefined	1	SAMEA120356343	R-92975	Pseudomonas lini	
+GCA_977007325.1	Complete genome	undefined	1	SAMEA120325693	R-92704	Pseudomonas lini	
+GCA_977008115.1	Complete genome	undefined	1	SAMEA120356342	R-92938	Pseudomonas lini	
+GCA_976997615.1	Contig	CDRLNL000000000	undefined	SAMEA120314644	R-92805	Pseudomonas lini	
+GCA_977004735.1	Contig	CDRMME000000000	undefined	SAMEA120322946	R-91911	Pseudomonas lini	
+GCA_977004805.1	Contig	CDRMMJ000000000	undefined	SAMEA120322944	R-91905	Pseudomonas lini	
+GCA_977007885.1	Contig	CDRMWI000000000	undefined	SAMEA120356363	R-93126	Pseudomonas lini	
+GCA_977007955.1	Contig	CDRMWJ000000000	undefined	SAMEA120356374	R-93139	Pseudomonas lini	
+GCA_976987155.1	Complete genome	undefined	1	SAMEA120301461	R-90879	Pseudomonas marginalis	
+GCA_977010815.1	Contig	CDRNAX000000000	undefined	SAMEA120373789	R-93393	Pseudomonas mohnii	
+GCA_976996985.1	Contig	CDRLMM000000000	undefined	SAMEA120311184	R-91479	Pseudomonas mohnii	
+GCA_976996115.1	Contig	CDRLLB000000000	undefined	SAMEA120311179	R-91511	Pseudomonas mohnii	
+GCA_977004785.1	Complete genome	undefined	1	SAMEA120322939	R-91892	Pseudomonas mohnii	
+GCA_977004885.1	Complete genome	undefined	1	SAMEA120322935	R-91886	Pseudomonas mohnii	
+GCA_977004905.1	Complete genome	undefined	1	SAMEA120322936	R-91888	Pseudomonas mohnii	
+GCA_977004855.1	Complete genome	undefined	1	SAMEA120322938	R-91890	Pseudomonas mohnii	
+GCA_977010915.1	Complete genome	undefined	1	SAMEA120373779	R-92713	Pseudomonas moraviensis	
+GCA_976997555.1	Complete genome	undefined	1	SAMEA120314590	R-92698	Pseudomonas moraviensis	
+GCA_976997405.1	Complete genome	undefined	1	SAMEA120314599	R-92716	Pseudomonas moraviensis	
+GCA_977004955.1	Complete genome	undefined	1	SAMEA120322890	R-92574	Pseudomonas nicosulfuronedens	
+GCA_977004975.1	Complete genome	undefined	1	SAMEA120322888	R-92564	Pseudomonas nicosulfuronedens	
+GCA_976989115.1	Complete genome	undefined	1	SAMEA120308848	R-88277	Pseudomonas nicosulfuronedens	
+GCA_977007335.1	Complete genome	undefined	1	SAMEA120325670	R-92584	Pseudomonas nicosulfuronedens	
+GCA_976997165.1	Complete genome	undefined	1	SAMEA120314569	R-92580	Pseudomonas nicosulfuronedens	
+GCA_976997185.1	Complete genome	undefined	1	SAMEA120314574	R-92589	Pseudomonas nicosulfuronedens	
+GCA_976989125.1	Contig	CDRKIW000000000	undefined	SAMEA120308850	R-88260	Pseudomonas nitroreducens	
+GCA_976989085.1	Contig	CDRKIT000000000	undefined	SAMEA120308866	R-90760	Pseudomonas putida	
+GCA_976989015.1	Contig	CDRKIU000000000	undefined	SAMEA120308865	R-90759	Pseudomonas putida	
+GCA_976997305.1	Complete genome	undefined	1	SAMEA120314600	R-92718	Pseudomonas reinekei	
+GCA_977010775.1	Complete genome	undefined	1	SAMEA120373774	R-93403	Pseudomonas rhizophila	
+GCA_977007715.1	Contig	CDRMVU000000000	undefined	SAMEA120226976	R-90784	Pseudomonas rhizophila	
+GCA_976996685.1	Contig	CDRLLF000000000	undefined	SAMEA120311197	R-91694	Pseudomonas rhizophila	
+GCA_977008165.1	Complete genome	undefined	1	SAMEA120356362	R-92708	Pseudomonas serbica	
+GCA_976987045.1	Complete genome	undefined	1	SAMEA120301460	R-90878	Pseudomonas serbica	
+GCA_976997485.1	Complete genome	undefined	1	SAMEA120314589	R-92697	Pseudomonas serbica	
+GCA_976997645.1	Complete genome	undefined	1	SAMEA120314594	R-92707	Pseudomonas shirazensis	
+GCA_977007495.1	Complete genome	undefined	1	SAMEA120325692	R-92699	Pseudomonas silesiensis	
+GCA_977007255.1	Contig	CDRMUO000000000	undefined	SAMEA120325682	R-92861	Pseudomonas umsongensis	
+GCA_977010885.1	Contig	CDRNAZ000000000	undefined	SAMEA120373788	R-93391	Pseudomonas veronii	
+GCA_977010875.1	Contig	CDRNBD000000000	undefined	SAMEA120373785	R-93388	Pseudomonas veronii	
+GCA_977010855.1	Contig	CDRNBA000000000	undefined	SAMEA120373791	R-93396	Pseudomonas veronii	
+GCA_977004895.1	Complete genome	undefined	1	SAMEA120322949	R-91763	Pseudomonas veronii	
+GCA_977004825.1	Complete genome	undefined	1	SAMEA120322947	R-92314	Pseudomonas veronii	
+GCA_977004835.1	Complete genome	undefined	1	SAMEA120322948	R-91754	Pseudomonas veronii	
+GCA_977004845.1	Complete genome	undefined	1	SAMEA120322940	R-91895	Pseudomonas veronii	
+GCA_976989175.1	Complete genome	undefined	1	SAMEA120309483	R-91752	Pseudomonas veronii	
+GCA_977005025.1	Complete genome	undefined	1	SAMEA120322887	R-92563	Pseudomonas veronii	
+GCA_977007925.1	Complete genome	undefined	1	SAMEA120356368	R-93131	Pseudomonas veronii	
+GCA_977008245.1	Complete genome	undefined	1	SAMEA120356379	R-93145	Pseudomonas veronii	
+GCA_977008125.1	Complete genome	undefined	1	SAMEA120356353	R-92871	Pseudomonas veronii	
+GCA_976996675.1	Complete genome	undefined	1	SAMEA120311198	R-91697	Pseudomonas veronii	
+GCA_976996295.1	Complete genome	undefined	1	SAMEA120311191	R-91764	Pseudomonas veronii	
+GCA_976996235.1	Complete genome	undefined	1	SAMEA120311190	R-91758	Pseudomonas veronii	
+GCA_977008055.1	Contig	CDRMWT000000000	undefined	SAMEA120356364	R-93127	Pseudomonas veronii	
+GCA_977008215.1	Contig	CDRMWW000000000	undefined	SAMEA120356378	R-93144	Pseudomonas veronii	
+GCA_977011035.1	Contig	CDRNBE000000000	undefined	SAMEA120373786	R-93389	Pseudomonas veronii	
+GCA_976996195.1	Contig	CDRLLD000000000	undefined	SAMEA120311200	R-91700	Pseudomonas veronii	
+GCA_976997395.1	Contig	CDRLNF000000000	undefined	SAMEA120314557	R-92566	Pseudomonas veronii	
+GCA_976997435.1	Contig	CDRLNG000000000	undefined	SAMEA120314565	R-92576	Pseudomonas veronii	
+GCA_977005105.1	Contig	CDRMMW000000000	undefined	SAMEA120322891	R-92581	Pseudomonas veronii	
+GCA_977011045.1	Complete genome	undefined	1	SAMEA120373770	R-93399	Pseudoxanthomonas mexicana	
+GCA_977007735.1	Contig	CDRMVS000000000	undefined	SAMEA120226967	R-90017	Pseudoxanthomonas wuyuanensis	
+GCA_977004795.1	Contig	CDRMMH000000000	undefined	SAMEA120322951	R-92825	Rahnella aceris	
+GCA_976997625.1	Contig	CDRLNI000000000	undefined	SAMEA120314643	R-92804	Rahnella aceris	
+GCA_977008185.1	Contig	CDRMWQ000000000	undefined	SAMEA120356372	R-93137	Rahnella aceris	
+GCA_977011965.1	Contig	CDRNCP000000000	undefined	SAMEA120399598	R-93405	Rahnella aceris	
+GCA_977011925.1	Contig	CDRNCM000000000	undefined	SAMEA120399609	R-92977	Ralstonia thomasii	
+GCA_976989245.1	Contig	CDRKJD000000000	undefined	SAMEA120309491	R-91787	Ralstonia thomasii	
+GCA_976997425.1	Contig	CDRLNJ000000000	undefined	SAMEA120314649	R-92740	Rhizobium binxianense	
+GCA_977012095.1	Contig	CDRNCT000000000	undefined	SAMEA120399604	R-92732	Rhizobium herbae	
+GCA_976997065.1	Complete genome	undefined	1	SAMEA120314558	R-92567	Rhodanobacter soli	
+GCA_976997175.1	Complete genome	undefined	1	SAMEA120314572	R-92587	Rhodanobacter soli	
+GCA_976997105.1	Complete genome	undefined	1	SAMEA120314571	R-92585	Rhodanobacter soli	
+GCA_976989135.1	Contig	CDRKIX000000000	undefined	SAMEA120308863	R-90016	Rhodococcus qingshengii	
+GCA_977012015.1	Complete genome	undefined	1	SAMEA120399608	R-92760	Serratia inhibens	
+GCA_977004775.1	Complete genome	undefined	1	SAMEA120322943	R-91904	Serratia plymuthica	
+GCA_977005045.1	Contig	CDRMMR000000000	undefined	SAMEA120322879	R-92751	Serratia quinivorans	
+GCA_977007445.1	Contig	CDRMUX000000000	undefined	SAMEA120325666	R-92748	Serratia quinivorans	
+GCA_976989215.1	Contig	CDRKJC000000000	undefined	SAMEA120309487	R-91776	Sphingobacterium detergens	
+GCA_976997495.1	Complete genome	undefined	1	SAMEA120314648	R-92829	Sphingobacterium faecium	
+GCA_976989055.1	Complete genome	undefined	1	SAMEA120308852	R-88270	Sphingobacterium multivorum	
+GCA_977004875.1	Complete genome	undefined	1	SAMEA120322950	R-92807	Sphingobacterium siyangense subsp. cladoniae	
+GCA_977004915.1	Complete genome	undefined	1	SAMEA120322933	R-91482	Sphingobacterium siyangense subsp. cladoniae	
+GCA_977004755.1	Complete genome	undefined	1	SAMEA120322942	R-91899	Sphingobacterium siyangense subsp. cladoniae	
+GCA_977007975.1	Complete genome	undefined	1	SAMEA120356350	R-92854	Sphingobacterium siyangense subsp. cladoniae	
+GCA_976997315.1	Contig	CDRLMY000000000	undefined	SAMEA120314602	R-92727	Sphingobium herbicidovorans	
+GCA_977007455.1	Contig	CDRMUY000000000	undefined	SAMEA120325663	R-92729	Sphingobium indicum	
+GCA_976997295.1	Complete genome	undefined	1	SAMEA120314652	R-92743	Sphingomonas koreensis	
+GCA_976997445.1	Contig	CDRLNC000000000	undefined	SAMEA120314653	R-92744	Sphingomonas oryzagri	
+GCA_976987135.1	Complete genome	undefined	1	SAMEA120301464	R-90887	Sphingopyxis chilensis	
+GCA_977007645.1	Contig	CDRMVP000000000	undefined	SAMEA120226979	R-90797	Sphingopyxis chilensis	
+GCA_976997265.1	Complete genome	undefined	1	SAMEA120314603	R-92730	Sphingopyxis fribergensis	
+GCA_977007355.1	Complete genome	undefined	1	SAMEA120325661	R-92622	Sphingopyxis fribergensis	
+GCA_976987205.1	Complete genome	undefined	1	SAMEA120301454	R-90031	Sphingopyxis fribergensis	
+GCA_976997335.1	Complete genome	undefined	1	SAMEA120314601	R-92726	Sphingopyxis panaciterrae	
+GCA_977007935.1	Contig	CDRMWF000000000	undefined	SAMEA120356370	R-93133	Staphylococcus saprophyticus	
+GCA_977007945.1	Contig	CDRMWE000000000	undefined	SAMEA120356373	R-93138	Staphylococcus saprophyticus	
+GCA_976995915.1	Contig	CDRLKU000000000	undefined	SAMEA120311177	R-90819	Staphylococcus warneri	
+GCA_976988985.1	Complete genome	undefined	1	SAMEA120308856	R-88276	Stenotrophomonas acidaminiphila	
+GCA_976997505.1	Complete genome	undefined	1	SAMEA120314597	R-92712	Stenotrophomonas bentonitica	
+GCA_977007385.1	Complete genome	undefined	1	SAMEA120325665	R-92747	Stenotrophomonas bentonitica	
+GCA_977011015.1	Complete genome	undefined	1	SAMEA120373777	R-92691	Stenotrophomonas indicatrix	
+GCA_976987065.1	Complete genome	undefined	1	SAMEA120301467	R-90894	Stenotrophomonas lactitubi	
+GCA_976989095.1	Complete genome	undefined	1	SAMEA120308867	R-90761	Stenotrophomonas lactitubi	
+GCA_976989005.1	Complete genome	undefined	1	SAMEA120308861	R-90015	Stenotrophomonas lactitubi	
+GCA_976997155.1	Complete genome	undefined	1	SAMEA120314556	R-92565	Stenotrophomonas rhizophila	
+GCA_976997145.1	Complete genome	undefined	1	SAMEA120314559	R-92568	Stenotrophomonas rhizophila	
+GCA_977007185.1	Complete genome	undefined	1	SAMEA120325664	R-92736	Stenotrophomonas rhizophila	
+GCA_977007195.1	Complete genome	undefined	1	SAMEA120325662	R-92628	Stenotrophomonas rhizophila	
+GCA_977007985.1	Complete genome	undefined	1	SAMEA120356347	R-92845	Stenotrophomonas rhizophila	
+GCA_977007135.1	Complete genome	undefined	1	SAMEA120325680	R-92839	Stenotrophomonas rhizophila	
+GCA_976996955.1	Complete genome	undefined	1	SAMEA120311188	R-91492	Stenotrophomonas riyadhensis	
+GCA_977008135.1	Complete genome	undefined	1	SAMEA120356349	R-92850	Stenotrophomonas riyadhensis	
+GCA_977008175.1	Complete genome	undefined	1	SAMEA120356351	R-92863	Stenotrophomonas riyadhensis	
+GCA_976989255.1	Complete genome	undefined	1	SAMEA120309490	R-91784	Stenotrophomonas riyadhensis	
+GCA_977010935.1	Complete genome	undefined	1	SAMEA120373768	R-92966	Stenotrophomonas riyadhensis	
+GCA_976997545.1	Complete genome	undefined	1	SAMEA120314635	R-92787	Stenotrophomonas riyadhensis	
+GCA_977010795.1	Complete genome	undefined	1	SAMEA120373781	R-92655	Stenotrophomonas sepilia	
+GCA_977005085.1	Complete genome	undefined	1	SAMEA120322881	R-92756	Stenotrophomonas sepilia	
+GCA_977007095.1	Complete genome	undefined	1	SAMEA120325657	R-93097	Stenotrophomonas sepilia	
+GCA_977007505.1	Complete genome	undefined	1	SAMEA120325659	R-93104	Stenotrophomonas sepilia	
+GCA_977007415.1	Complete genome	undefined	1	SAMEA120325656	R-93085	Stenotrophomonas sepilia	
+GCA_977007825.1	Contig	CDRMVX000000000	undefined	SAMEA120226974	R-90782	Stutzerimonas chloritidismutans	
+GCA_976987105.1	Contig	CDRKDD000000000	undefined	SAMEA120301457	R-90875	Stutzerimonas chloritidismutans	
+GCA_977007665.1	Complete genome	undefined	1	SAMEA120226969	R-90769	Stutzerimonas chloritidismutans	
+GCA_977011005.1	Complete genome	undefined	1	SAMEA120373769	R-93398	Thermomonas fusca	
+GCA_976989265.1	Contig	CDRKJE000000000	undefined	SAMEA120309484	R-91765	Variovorax beijingensis	
+GCA_977007205.1	Contig	CDRMUM000000000	undefined	SAMEA120325695	R-92738	Variovorax beijingensis	
+GCA_976997285.1	Complete genome	undefined	1	SAMEA120314636	R-92788	Variovorax boronicumulans	
+GCA_976997465.1	Complete genome	undefined	1	SAMEA120314584	R-92678	Variovorax boronicumulans	
+GCA_976997575.1	Complete genome	undefined	1	SAMEA120314645	R-92818	Variovorax boronicumulans	
+GCA_977012065.1	Complete genome	undefined	1	SAMEA120399599	R-92840	Variovorax boronicumulans	
+GCA_977011995.1	Contig	CDRNCW000000000	undefined	SAMEA120399594	R-92947	Variovorax durovernensis	
+GCA_977011975.1	Contig	CDRNCX000000000	undefined	SAMEA120399595	R-92961	Variovorax durovernensis	
+GCA_977012005.1	Contig	CDRNCY000000000	undefined	SAMEA120399592	R-92939	Variovorax durovernensis	
+GCA_977007995.1	Contig	CDRMWM000000000	undefined	SAMEA120356367	R-93130	Variovorax gossypii	
+GCA_976989165.1	Contig	CDRKJB000000000	undefined	SAMEA120309485	R-91771	Variovorax gossypii	
+GCA_977004815.1	Contig	CDRMMI000000000	undefined	SAMEA120322934	R-91483	Variovorax gossypii	
+GCA_977007875.1	Contig	CDRMWG000000000	undefined	SAMEA120356359	R-93076	Xanthobacter sediminis	
+GCA_976996135.1	Complete genome	undefined	1	SAMEA120311193	R-91682	Xanthomonas arboricola	
