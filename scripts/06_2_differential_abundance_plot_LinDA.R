@@ -24,18 +24,44 @@ color_positive ="#2A6F97"
 color_negative ="#FF2400"
 
 # 3. Format matrix rows into an accessible data frame matching standard plot metrics
-plot_data_clean <- data.frame(
+# Convert raw LinDA matrix into clean dataframe
+plot_data_base <- data.frame(
   Taxa           = rownames(raw_metrics),
   Log2FoldChange = raw_metrics$log2FoldChange,
-  lfcSE          = raw_metrics$lfcSE, # Standard Error calculated by LinDA
+  lfcSE          = raw_metrics$lfcSE, 
   padj           = raw_metrics$padj,
   reject         = raw_metrics$reject
 ) %>%
-  # 4. Filter out background noise & keep only significant threshold parameters
   filter(Taxa != "27F-1492R") %>% 
-  filter(reject == TRUE) %>% 
-  filter(abs(Log2FoldChange) >= log_fold_cutoff_plotting) %>%
-  mutate(Taxa = reorder(Taxa, Log2FoldChange))
+  filter(reject == TRUE)
+
+
+# ------------------------------------------------------------------------------
+# 2. DYNAMIC FILTERING ENGINE
+# ------------------------------------------------------------------------------
+if (filter_mode == "top_n") {
+  
+  # MODE A: Directional Top N Slicing (Top N Positive + Top N Negative)
+  plot_data_clean <- plot_data_base %>%
+    group_by(direction = ifelse(Log2FoldChange > 0, "Positive", "Negative")) %>%
+    slice_max(order_by = abs(Log2FoldChange), n = top_n_taxa, with_ties = FALSE) %>%
+    ungroup() %>%
+    mutate(Taxa = reorder(Taxa, Log2FoldChange))
+  
+  subtitle_text <- paste0("Top ", top_n_taxa, " positively & negatively enriched taxa (LinDA, FDR < 0.05)")
+  
+} else if (filter_mode == "log_fold") {
+  
+  # MODE B: Absolute Log2 Fold-Change Thresholding
+  plot_data_clean <- plot_data_base %>%
+    filter(abs(Log2FoldChange) >= log_fold_cutoff_plotting) %>%
+    mutate(Taxa = reorder(Taxa, Log2FoldChange))
+  
+  subtitle_text <- paste0("Significant taxa with FDR < 0.05 and |Log2FC| ≥ ", log_fold_cutoff_plotting)
+  
+} else {
+  stop("Invalid 'filter_mode' specified. Please choose either 'top_n' or 'log_fold'.")
+}
 
 # 5. Check if any taxa passed your filters before attempting to plot
 if (nrow(plot_data_clean) == 0) {

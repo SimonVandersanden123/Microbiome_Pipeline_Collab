@@ -64,20 +64,20 @@ variance_filtering:
 subsetting:
   use_subset: true
   column_name: "wetland_sample"
-  target_value: "Wetland"
+  target_value: "INF"
 
 ### 2.0 Community barcharts parameters
 Barplot_specific:
-  palette_choice: "pals::kelly" #pals::polychrome       pals::kelly    pals::stepped"
+  palette_choice: "pals::polychrome" #pals::polychrome       pals::kelly    pals::stepped"
   
   # Section 2.1: Global Community Barplots
   global_barplots:
-    high_level: "phylum"
-    low_level:  "class"
-    facet_var: "MF_number"
-    threshold: 0.5 #
-    fig_width: 10
-    fig_height: 8
+    high_level: "order"
+    low_level:  "genus"
+    facet_var: "timepoint" #timepoint
+    threshold: 2.5 #
+    fig_width: 9
+    fig_height: 7
     dpi: 300
 
   # Section 2.2: Specific Group Focus
@@ -86,8 +86,8 @@ Barplot_specific:
     target_val: "Burkholderiales_2"
     high_level: "family"
     low_level: "genus"
-    facet_var: "Sample"
-    threshold: 0.5
+    facet_var: "timepoint_CW_number_MF_number"
+    threshold: 1.5
     fig_width: 12
     fig_height: 8
     dpi: 300
@@ -113,27 +113,26 @@ Alpha_Diversity:
 ### 4.0 Beta Diversity: Community Trait Analysis
 Beta_Diversity:
   # Global Plotting Settings
-  color_var: "sample_depth_information" #Sample_depth_information
+  color_var: "timepoint" #Sample_depth_information
   shape_var: "sample_depth_information"
-  group_clustering: "sample_depth_information"
+  group_clustering: "timepoint_sample_depth_information"
   show_ellipses: true
-  labels: "timepoint_MF_number" #Timepoint
-  show_labels: true
+  labels: "CW_number" #Timepoint
+  show_labels: false
 #
   fig_width: 12
   fig_height: 8
 
   # Section 4.0: Basic Ordination
   basic:
-    metric: "wunifrac" # Options: aitchison, bray, jaccard, unifrac, wunifrac
+    metric: "aitchison" # Options: aitchison, bray, jaccard, unifrac, wunifrac
     clr_zero_imputation_variant: "BMR"
 
   # Section 4.1 & 4.2: Advanced (Vectors/Environmental Fit)
   advanced:
     ### environmental parameters settings
-    numeric_env_variables: ["concentration_BTEX_ug_l", "phosphorus_total", "redoxpot", "pH", "EGV3", "naphthalene_PAH_ug_l", "iron2_TOTAL_mmoles_e_l__sulfate_relative_to_1D_flow", "sulfate_consumption_1D_flow_mmols_e_l_no_negatives", "manganese2_electron_acceptor_capacity_mmol_e_l",
-    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_influent", "Benzoate_degradation_ko00362", "Xylene_degradation_ko00622", "Toluene_degradation_ko00623", "Polycyclic_aromatic_hydrocarbon_degradation_ko00624", "Naphthalene_degradation_ko00626", "Methane_metabolism_ko00680", "Carbon_fixation_pathways_in_prokaryotes_ko00720", "Sulfur_metabolism_ko00920", "Metabolism_of_xenobiotics_by_cytochrome_P450_ko00980" ] #["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
-    categ_env_variables: ["timepoint", "sample_depth_information", "electron_balance_1D_flow", "dominant_electron_acceptor_species_1D_flow"] # ["Timepoint", "Sample_depth_information", "CW_Number"]
+    numeric_env_variables: ["concentration_BTEX_ug_l", "iron2_mg_l" ,"oxygen", "manganese2_mg_l", "sulfate_mg_l", "phosphorus_total" ] #["iron2", "phosphorus_total", "concentration_BTEX", "sulfate"]
+    categ_env_variables: ["sample_depth_information"] # ["timepoint", "sample_depth_information", "CW_number"]
     # Decide wheter you want to filter these environmental variables
     Filtering_env_variables_perm: true # Decide wheter you want to filter these environmental parameters based on the marginal permanova results
     arrow_env_permanova_significance: 0.05
@@ -155,18 +154,18 @@ Beta_Diversity:
 Differential_Abundance:
   target_level: "genus" 
   numeric_env_variables: ["concentration_BTEX_ug_l", "phosphorus_total", "redoxpot", "pH", "EGV3", "naphthalene_PAH_ug_l", "iron2_TOTAL_mmoles_e_l__sulfate_relative_to_1D_flow", "sulfate_consumption_1D_flow_mmols_e_l_no_negatives", "manganese2_electron_acceptor_capacity_mmol_e_l",
-    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "manganese2_mg_l", "iron2_mg_l", "sulfate_mg_l","time_continuous", "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow"]
+    "electron_acceptor_capacity_mmol_e_consumed_rel_to_1D_flow", "manganese2_mg_l", "iron2_mg_l", "sulfate_mg_l","time_continuous","time_months","time_z_normalized" , "electron_donor_acceptor_balance_BTEXN_PAH_acceptors_consumed_relative_to_1D_flow"]
   categ_env_variables: ["timepoint", "CW_number", "CW_number_MF_number" , "sample_depth_information", "electron_balance_1D_flow", "dominant_electron_acceptor_species_1D_flow"]
   # Model Configuration
   model:
     main_var: "sample_depth_information"
-    ref_group: "0.15-0.30"
+    ref_group: "0.60-0.80"
     # Note: Use double quotes for the formula to handle special characters
-    formula: "~ time_continuous * sample_depth_information + sulfate_mg_l +iron2_mg_l + concentration_BTEX_ug_l + phosphorus_total + (1 | CW_number_MF_number)"
+    formula: "~ time_months + sample_depth_information + (1 | CW_number_MF_number)"
 
   # LinDA Algorithmic Parameters
   params:
-    prev_filter: 0.05
+    prev_filter: 0.25
     is.winsor: "TRUE"
     outlier_pct: 0.03
     zero_handling: "imputation"
@@ -176,8 +175,8 @@ Differential_Abundance:
 
   # Visualization
   plotting:
-    var_to_plot: "time_continuous:sample_depth_information0.60-0.80" # Must match one of names(linda_res$output)
+    var_to_plot: "sample_depth_information0.15-0.30" # Must match one of names(linda_res$output)
     fig_width: 12
     fig_height: 12
     
-    #time_continuous , sample_depth_information0.60-0.80
+    #time_continuous , sample_depth_information0.60-0.80 sample_depth_information0.15-0.30

@@ -206,10 +206,10 @@ if(exists("mibi_tss")) {
   message("Normalization complete: mibi_tss, mibi_pseudo_clr, and mibi_bmr_clr are ready.")
 }
 #quickly save the generated objects for a quicker later analysis
-saveRDS(mibi_tss, file = "Objects_Generated_In_Pipeline/mibi_tss_All_Wetland_Samples.rds")
-saveRDS(mibi_pseudo_clr, file = "Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Wetland_Samples.rds")
-saveRDS(mibi_bmr_clr, file = "Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Wetland_Samples.rds")
-saveRDS(ps_work, file = "Objects_Generated_In_Pipeline/ps_work_All_Wetland_Samples.rds")
+saveRDS(mibi_tss, file = "Objects_Generated_In_Pipeline/mibi_tss_All_Samples.rds")
+saveRDS(mibi_pseudo_clr, file = "Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Samples.rds")
+saveRDS(mibi_bmr_clr, file = "Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Samples.rds")
+saveRDS(ps_work, file = "Objects_Generated_In_Pipeline/ps_work_All_Samples.rds")
 ```
 
 ### The script generates three primary objects. Choosing the right one depends on your specific analysis:
@@ -234,22 +234,28 @@ mibi_meta_table_new <- read.table(
   dec = config$analysis_params$metadata_dec
 )
 
-# Load in the previously saved and normalized objects
-mibi_tss <- readRDS("Objects_Generated_In_Pipeline/mibi_tss_All_Wetland_Samples.rds") 
-mibi_pseudo_clr <-readRDS("Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Wetland_Samples.rds") 
-mibi_bmr_clr <- readRDS("Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Wetland_Samples.rds") 
-ps_work <- readRDS("Objects_Generated_In_Pipeline/ps_work_All_Wetland_Samples.rds") 
-# Load in the previously saved and normalized objects all samples included
-#mibi_tss <- readRDS("Objects_Generated_In_Pipeline/mibi_tss_All_Samples.rds") 
-#mibi_pseudo_clr <-readRDS("Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Samples.rds") 
-#mibi_bmr_clr <- readRDS("Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Samples.rds") 
-#ps_work <- readRDS("Objects_Generated_In_Pipeline/ps_work_All_Samples.rds") 
+## Load in the previously saved and normalized objects
+#mibi_tss <- readRDS("Objects_Generated_In_Pipeline/mibi_tss_All_Wetland_Samples.rds") 
+#mibi_pseudo_clr <-readRDS("Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Wetland_Samples.rds") 
+#mibi_bmr_clr <- readRDS("Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Wetland_Samples.rds") 
+#ps_work <- readRDS("Objects_Generated_In_Pipeline/ps_work_All_Wetland_Samples.rds") 
+## Change the samples names, so they match with the metadata formatting
+#sample_names(ps_work) <- ps_work@sam_data$Sample_ID
+#sample_names(mibi_tss) <- mibi_tss@sam_data$Sample_ID
+#sample_names(mibi_pseudo_clr) <- mibi_pseudo_clr@sam_data$Sample_ID
+#sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$Sample_ID
 
+# Load in the previously saved and normalized objects all samples included
+mibi_tss <- readRDS("Objects_Generated_In_Pipeline/mibi_tss_All_Samples.rds") 
+mibi_pseudo_clr <-readRDS("Objects_Generated_In_Pipeline/mibi_pseudo_clr_All_Samples.rds") 
+mibi_bmr_clr <- readRDS("Objects_Generated_In_Pipeline/mibi_bmr_clr_All_Samples.rds") 
+ps_work <- readRDS("Objects_Generated_In_Pipeline/ps_work_All_Samples.rds") 
 # Change the samples names, so they match with the metadata formatting
 sample_names(ps_work) <- ps_work@sam_data$Sample_ID
 sample_names(mibi_tss) <- mibi_tss@sam_data$Sample_ID
 sample_names(mibi_pseudo_clr) <- mibi_pseudo_clr@sam_data$Sample_ID
 sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$Sample_ID
+
 #load in the updated metadata table 
 sample_data(ps_work) <- mibi_meta_table_new
 sample_data(mibi_tss) <- mibi_meta_table_new
@@ -264,16 +270,13 @@ sample_names(mibi_bmr_clr) <- mibi_bmr_clr@sam_data$sample_names
 
 
 ### Make subsets in ps_work per Constructed wetland for specific analysis:
-barchart_target   <- "Wetland" #
+barchart_target   <- "Wetland" #Wetland
 barchart_target_col <- "wetland_sample" #
 # Professional trick: use 'get' to find the column name dynamically from the string in YAML
 ps_work <- subset_samples(ps_work, get(barchart_target_col) == barchart_target)
 mibi_bmr_clr <- subset_samples(mibi_bmr_clr, get(barchart_target_col) == barchart_target)
 mibi_tss <- subset_samples(mibi_tss, get(barchart_target_col) == barchart_target)
-
-
 ```
-
 
 # 2. Community visualisation: barplots
 ## 2.1 Relative abundance plots on specific levels
@@ -298,7 +301,7 @@ data_for_plot <- prepare_abundance_data(
 #Run this once
 #set
 
-#my_colors <- get_shaded_palette(data_for_plot, pal_choice)
+my_colors <- get_shaded_palette(data_for_plot, pal_choice)
 
 # --- 3. DYNAMIC PLOTTING ---
 # This is a complex plotting command that is constructed to take into acount the previously specified parameters, high and low taxonomic levels, relative abundance threshold cutoff, how to group the samples for plotting. So this information is also found on the finally generated plot
@@ -325,13 +328,16 @@ Relative_Abundance_Plot <- ggplot(data_for_plot, aes(x = !!sym(v_glob$facet_var)
 Relative_Abundance_Plot
 
 # Save output using config values for naming
-ggsave(paste0("results/CW_3/Relative_Abundance_Plot_", v_glob$high_level, "_", v_glob$low_level, ".png"), 
+ggsave(paste0("results/Results_Sep_2026/Relative_Abundance_Plot_", v_glob$high_level, "_", v_glob$low_level, ".png"), 
+       plot = Relative_Abundance_Plot, width = v_glob$fig_width, height = v_glob$fig_height, dpi = v_glob$dpi)
+ggsave(paste0("results/Results_Sep_2026/Relative_Abundance_Plot_", v_glob$high_level, "_", v_glob$low_level, ".svg"), 
        plot = Relative_Abundance_Plot, width = v_glob$fig_width, height = v_glob$fig_height, dpi = v_glob$dpi)
 ```
 
 ## 2.2 Relative abundance plots within specific groups
 This chunk of code is designed to plot relative abundances of you microbial community data. But here you can look within specific group and get the lower level taxonomic distribution so you can gain insights into specific important groups within you data.The labeling is two levels to ensure comprehensiveness, and detail (higher phylogenetic level and lower for the detail). The main color is determined by the high level taxonomy, variations of this main color are used in the lower levels. Several choices can be made, a relative abundance threshold level, which is a cutoff level for relative abundance, if a taxon does not meet this threshold i.e. all taxa with relative abundance belower this threshold are put into 'Others' 
 ```{r plot specific group abundance, fig.width=12, fig.height=8}
+config <- yaml::read_yaml(config_path)
 source(config$scripts$barplot_focus)
 # --- 1. DEFINE SPECIFICS FROM CONFIG ---
 v_foc      <- config$Barplot_specific$focus_barplot
@@ -377,6 +383,8 @@ Specific_Group_Relative_Abundance_Plot <- ggplot(data_subset, aes(x = !!sym(v_fo
 Specific_Group_Relative_Abundance_Plot
 
 ggsave(paste0("results/Specific_Group_Relative_Abundance_Plot_", v_foc$target_val, ".png"), 
+       plot = Specific_Group_Relative_Abundance_Plot, width = v_foc$fig_width, height = v_foc$fig_height, dpi = v_foc$dpi)
+ggsave(paste0("results/Specific_Group_Relative_Abundance_Plot_", v_foc$target_val, ".svg"), 
        plot = Specific_Group_Relative_Abundance_Plot, width = v_foc$fig_width, height = v_foc$fig_height, dpi = v_foc$dpi)
 ```
 
@@ -515,6 +523,15 @@ arrow_reduction_taxa           <- config$Beta_Diversity$advanced$pca_arrow_taxa 
 source(config$scripts$beta_calc)
 source(config$scripts$beta_vis_pca) #if error, then make sure the right metric is choosen in the config file
 
+# =====================================================================
+# 5. Save Output
+# =====================================================================
+#
+ggsave(paste0("results/Results_Sep_2026/PCA_Upgraded_wetland_samples_", beta_metric, ".png"), 
+       p_beta_PCA, width = 10, height = 10, dpi = 300)
+ggsave(paste0("results/Results_Sep_2026/PCA_Upgraded_wetland_samples_", beta_metric, ".svg"), 
+       p_beta_PCA, width = 10, height = 10, dpi = 300)
+
 plot(p_beta_PCA)
 ```
 
@@ -596,11 +613,11 @@ net_params <- list(
   # --- Sample Subsetting (2-Layer Metadata Filters) ---
   # Layer 1: Primary filter
   filter1_var       = "timepoint",
-  filter1_val       = c("T0", "T1", "T2", "T3"),
+  filter1_val       = c("T5", "T6", "T7", "T8"), # "T5", "6", "T7", "T8" or "T0", "T1", "T2", "T3"
   
   # Layer 2: Secondary filter (Set filter2_var = NULL to disable)
-  filter2_var       = "CW_number",
-  filter2_val       = c("CW_2"),
+  filter2_var       = "sample_depth_information", # NULL
+  filter2_val       = c("0.15-0.30"), # 0.60-0.80 or 0.15-0.30
   # Step 3. Prevalence Taxonomic Filtering
   # --- Taxa Filtering ---
   min_prevalence    = 0.25 # Retain taxa present in >= 25% of subset samples (0.0 to disable)
@@ -615,36 +632,36 @@ source(config$scripts$network_analysis_object_selection)
 ## 5.2 Network construction step:
 ```{r}
 config <- yaml::read_yaml(config_path)
-# Method selection: "sparcc" (Correlation), "spring" (Conditional Dependence), or "propr" (Proportionality)
-network_association_method ="sparcc"
-# Choices: "genus", "family",....
-network_tax_level        = "genus"
-# Choices: "signed" (default), "unsigned", "signedPos", "TOMdiss"
-network_Distance_Properties = "signed"
+
 # Network Construction Parameters
 net_build_params <- list(
   # Primary input (generated by previous script step)
   ps_input         = ps_object_for_network_analysis,
   # Method selection: "sparcc" (Correlation), "spring" (Conditional Dependence), or "propr" (Proportionality)
-  method           = network_association_method,
+  method           = "propr",
+  # zeroMethod_Selection, character indicating the method used for zero replacement. Possible values are: "none" (default), "pseudo", "pseudoZO", "multRepl", "alrEM", "bayesMult". 
+  zeroMethod_selection = "multRepl", #bayesMult
   # Grouping variable for multi-network generation (Set NULL if no grouping)
-  group_var        = "sample_depth_information",
+  group_var        = NULL, #sample_depth_information
   # Taxonomic Settings
-  tax_level        = network_tax_level,
+  tax_level        = "genus",
   # Taxa Subsetting / Filtering within netConstruct
-  filter_tax_method = "highestFreq", # e.g., "highestFreq", "none", "totalReads"
-  top_taxa_n        = 50,            # Number of top taxa to retain
+  filter_tax_method = "highestFreq", # e.g., "highestFreq", "none", "totalReads", "relFreq", "numbSamp"
+  filt_taxa_param =  50, #Number of top taxa to retain, minimum number of samples,....: list with parameters for the filter methods given by0.01 filtTax. Possible list entries are: "totalReads" (int), "relFreq" (value in [0,1]), "numbSamp" (int), "highestVar" (int), "highestFreq" (int).
   # Sparsification / Thresholding Parameters
-  spars_method     = "threshold",
-  thresh_sparcc    = 0.3,
-  thresh_propr     = 0.6,
+  spars_method     = "threshold", # or bootstrap, or t-test
+  thresh_sparcc    = 0.6,
+  thresh_propr     = 0.5,
+  # If as sparsification method t test or bootstrap is used
+  alpha_threshold = 0.05,
+  adjust_method =  "BH",  
   # SPRING Specific Parameters
   spring_nlambda   = 10,
   spring_rep_num   = 10,
   spring_rmethod   = "approx",
   # Visualization / Distance Properties
   # Choices: "signed" (default), "unsigned", "signedPos", "TOMdiss"
-  diss_func        = network_Distance_Properties, 
+  diss_func        = "signed", 
   # Global Execution Settings
   seed             = 123456,
   verbose          = 2,
@@ -652,11 +669,115 @@ net_build_params <- list(
   save_output      = TRUE,
   output_rds_path  = "Objects_Generated_In_Pipeline/Network_Analysis/network_constructed_object.rds"
 )
-
+#help("netConstruct")
+#help("netAnalyze")
+#p.adjust.methods
 # Run external modular script
 source(config$scripts$network_construction)
+# Save the constructed network objects
+saveRDS(network_to_analyse, file= "Figures/network_construction_object_T5_T8_Shallow.rds")
+```
+#Network working chunk
+
+```{r}
+# =====================================================================
+# Now we start with the network analysis, there is a lot that can be done with the generated network
+# =====================================================================
+head(network_to_analyse$edgelist1)
+plotHeat(network_to_analyse$assoMat1, textUpp = "none", textLow = "none", labCex = 0.7) #labCex, to adjust the label size of the matrix
+plotHeat(network_to_analyse$simMat1, textUpp = "none", textLow = "none",labCex = 0.7 )
+
+#####
+props_network_to_analyse <- netAnalyze(network_to_analyse,
+           centrLCC = TRUE, # logical indicating whether to compute centralities only for the largest connected component (LCC)
+           weightDeg = TRUE, # TRUE or FALSE: If TRUE, the weighted degree is used, which has an influence on the centrality scores of a certain node. weighted takes into account the number and the strength of the interactions with the adjecent nodes.
+           normDeg = TRUE, #
+           normBetw = TRUE,
+           normClose = TRUE,
+           
+           # Cluster related:
+           clustMethod = "cluster_fast_greedy", # cluster_fast_greedy
+           clustPar = NULL,
+           clustPar2 = NULL,
+           weightClustCoef = TRUE,
+           
+           # Hub related:
+           hubPar = "eigenvector",
+           hubQuant = 0.95, # quantile for determing hub nodes, set more stringent if you want fewer 'hub' species
+           lnormFit = FALSE,
+           
+           # Graphlet related:
+           graphlet = TRUE,
+           orbits = c(0, 2, 5, 7, 8, 10, 11, 6, 9, 4, 1),
+           gcmHeat = TRUE,
+           gcmHeatLCC = TRUE,
+           
+           # Further arguments:
+           avDissIgnoreInf = FALSE,
+           sPathAlgo = "dijkstra",
+           sPathNorm = TRUE,
+           normNatConnect = TRUE,
+           connectivity = TRUE,
+           verbose = 1
+           )
+
+# here you have a large amount of network characteristics 
+summary(props_network_to_analyse, numbNodes = 5L)
+saveRDS(props_network_to_analyse, file= "Figures/network_property_object_T5_T8_Shallow.rds")
+
+library(svglite)
+# 1. Open SVG Graphics Device with strict aspect ratio bounds
+svg_output_path <- "Figures/Timpoint_T5_T8_Shallow_Samples.svg"
+dir.create(dirname(svg_output_path), recursive = TRUE, showWarnings = FALSE)
+svglite(file = svg_output_path, width = 16, height = 8)
+
+# 2. Render Network with Balanced Layout & Typography Parameters
+plot_network <- plot(
+  props_network_to_analyse,
+  
+  # --- Node Sizing & Dynamic Range Compression ---
+  nodeSize       = "clr",               # Relative Abundance, eigenvector"clr, TSS
+  nodeSizeSpread = 4.5,                 # REDUCED from 6: Compresses range so large nodes shrink
+  cexNodes       = 1.2,                 # Base size multiplier to keep nodes compact
+  nodeColor      = "cluster",           # Color by functional/topological module
+  rmSingles      = FALSE,                # Drop unconnected singletons to collapse blank space
+  
+  # --- Network Physics (Fixing Separation) ---
+  repulsion      = 0.7,                # LOWERED from 1.0/0.6: Pulls distant sub-graphs together
+  shortenLabels  = "none",              # Keep clean taxon names
+  
+  # --- Typography & Labeling (Fixing Unreadable Text) ---
+  labelScale     = FALSE,               # Prevents text from scaling down to invisible dots on small nodes
+  cexLabels      = 1,                # INCREASED for sharp, clear text at 100% vector scale
+  
+  # --- Interaction/Edge Visuals ---
+  posCol         = "#2A6F97",           # Positive proportionality (rho >= 0.50)
+  negCol         = "#FF2400",           # Negative correlations
+  edgeWidth      = 0.5,                 # Edge thickness factor
+  edgeTranspLow  = 40,                  # Subdue weak interactions
+  edgeTranspHigh = 0,
+  
+  # --- Group Titles ---
+  title1         = "Shallow",
+  title2         = "Deep",
+  showTitle      = TRUE,
+  cexTitle       = 1.2
+)
+dev.off()
+```
+
+## Network comparison and analysis chunk
+```{r}
+# Here we can compare different network properties with one another
+summary(network_property_object_T0_T3_Shallow)
+summary(network_property_object_T0_T3_Deep)
+
+summary(network_property_object_T5_T8_Shallow)
 
 ```
+
+
+
 ## 5.3 Network selection and analysis
 ```{r}
 # =====================================================================
@@ -692,17 +813,17 @@ summary(props_network_to_analyse, numbNodes = 5L)
 plot_network <- plot(props_network_to_analyse, 
           labelScale = FALSE,
           nodeColor = "cluster",  
-          nodeSize = "eigenvector", #"eigenvector"
-          repulsion = 0.5, #0.8, the lower you go 
-          rmSingles = TRUE,
-          cexLables = 1.3,
+          nodeSize = "clr", #"eigenvector"clr, relFreq
+          repulsion = 0.6, #0.8, the lower you go 
+          rmSingles = FALSE,
+          cexLables = 1,
           posCol = "#2A6F97", # "darkturquoise" or "#2A6F97"
           negCol = "#FF2400", # "orange"
-          nodeSizeSpread = 3,
+          nodeSizeSpread = 6,
           cexNodes = 2,
           title1 = "Network on genus level with choosen associations", 
           showTitle = TRUE,
-          cexTitle = 2.1,
+          cexTitle = 1.5,
           cexLabels = 1.5)
 ###############################
 legend(0.7, 1.1, cex = 1, title = "estimated association:",
@@ -718,20 +839,66 @@ pdf(file = paste0("Objects_Generated_In_Pipeline/Network_Analysis/netcomi_", net
 plot_network <- plot(props_network_to_analyse, 
           labelScale = FALSE,
           nodeColor = "cluster",  
-          nodeSize = "eigenvector", #"eigenvector"
-          repulsion = 0.5, #0.8, the lower you go 
+          nodeSize = "clr", #"eigenvector"clr
+          repulsion = 0.6, #0.8, the lower you go 
           rmSingles = TRUE,
-          cexLables = 1.3,
+          cexLables = 1,
           posCol = "#2A6F97", # "darkturquoise" or "#2A6F97"
           negCol = "#FF2400", # "orange"
-          nodeSizeSpread = 3,
+          nodeSizeSpread = 6,
           cexNodes = 2,
           title1 = "Network on genus level with choosen associations", 
           showTitle = TRUE,
           cexTitle = 2.1,
           cexLabels = 1.5)
 dev.off()
+#####################SAve as SVG
+# ==============================================================================
+# FIGURE 3: OPTIMIZED DUAL-NETWORK LAYOUT (SVG READY)
+# PROJECT: Wetland Griftpark Microbial Community Analysis
+# ==============================================================================
 
+library(svglite)
+
+# 1. Open SVG Graphics Device with strict aspect ratio bounds
+svg_output_path <- "Figures/Figure3_Network_Dual_Group_latest_timepoints.svg"
+dir.create(dirname(svg_output_path), recursive = TRUE, showWarnings = FALSE)
+svglite(file = svg_output_path, width = 16, height = 8)
+
+# 2. Render Network with Balanced Layout & Typography Parameters
+plot_network <- plot(
+  props_network_to_analyse, 
+  
+  # --- Node Sizing & Dynamic Range Compression ---
+  nodeSize       = "clr",               # Relative Abundance, eigenvector"clr, TSS
+  nodeSizeSpread = 4.5,                 # REDUCED from 6: Compresses range so large nodes shrink
+  cexNodes       = 1.2,                 # Base size multiplier to keep nodes compact
+  nodeColor      = "cluster",           # Color by functional/topological module
+  rmSingles      = FALSE,                # Drop unconnected singletons to collapse blank space
+  
+  # --- Network Physics (Fixing Separation) ---
+  repulsion      = 0.6,                # LOWERED from 1.0/0.6: Pulls distant sub-graphs together
+  shortenLabels  = "none",              # Keep clean taxon names
+  
+  # --- Typography & Labeling (Fixing Unreadable Text) ---
+  labelScale     = FALSE,               # Prevents text from scaling down to invisible dots on small nodes
+  cexLabels      = 0.95,                # INCREASED for sharp, clear text at 100% vector scale
+  
+  # --- Interaction/Edge Visuals ---
+  posCol         = "#2A6F97",           # Positive proportionality (rho >= 0.50)
+  negCol         = "#FF2400",           # Negative correlations
+  edgeWidth      = 0.5,                 # Edge thickness factor
+  edgeTranspLow  = 40,                  # Subdue weak interactions
+  edgeTranspHigh = 0,
+  
+  # --- Group Titles ---
+  title1         = "Shallow",
+  title2         = "Deep",
+  showTitle      = TRUE,
+  cexTitle       = 1.2
+)
+
+dev.off()
 ```
 
 # Plotting the network with phylum information
@@ -877,8 +1044,6 @@ plot(props_network_to_analyse,
 ```
 
 
-
-
 # 6 Differential_abundance_LinDA.R
 
 ## 6.1 Generating the object for LinDA analysis
@@ -913,7 +1078,7 @@ linda_params <- list(
   filter2_val        = c("CW_2"),
   
   # --- Taxa Filtering ---
-  min_prevalence     = 0.0, # Retain taxa present in >= 10% of subset samples (0.0 to disable)
+  min_prevalence     = 0.250, # Retain taxa present in >= 10% of subset samples (0.0 to disable)
   
   # --- Metadata Formatting ---
   categ_env_variables = config$Differential_Abundance$categ_env_variables,
@@ -1052,6 +1217,13 @@ config <- yaml::read_yaml(config_path)
 # Extract plot variable dynamically from YAML config
 var_to_plot <- config$Differential_Abundance$plotting$var_to_plot
 
+# Select Filtering Mode: "top_n" OR "log_fold"
+filter_mode <- "top_n"
+# Threshold Values
+top_n_taxa <- 50                      # Active if filter_mode == "top_n" (Top N Pos + Top N Neg)
+log_fold_cutoff_plotting <- 1.5       # Active if filter_mode == "log_fold" (|Log2FC| threshold)
+
+
 # Display available effect names to confirm match
 message("Available LinDA output effects:")
 print(names(linda_res$output))
@@ -1062,6 +1234,19 @@ if (!var_to_plot %in% names(linda_res$output)) {
 
 # Run external visualization script
 source(config$scripts$linda_plot)
+
+# Print plot to screen
+print(good_plot)
+  
+# 7. Safe Direct Export
+output_dir <- "results/linda/plots"
+if(!dir.exists(output_dir)) dir.create(output_dir, recursive = TRUE)
+  
+safe_name <- gsub("[^a-zA-Z0-9]", "_", var_to_plot)
+ggsave(file.path(output_dir, paste0("final_linda_", safe_name, ".png")), 
+        plot = good_plot, width = 5, height = 7, dpi = 300)
+ggsave(file.path(output_dir, paste0("final_linda_", safe_name, ".svg")), 
+        plot = good_plot, width = 5, height = 7, dpi = 300)
 ```
 
 ## 6.9 Small chunk of code to test which models are the best, this is just informative

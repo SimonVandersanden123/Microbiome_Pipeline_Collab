@@ -14,6 +14,7 @@ pca_summary <- summary(eigenvals(ord_beta))
 pc1_var     <- round(pca_summary[2, 1] * 100, 1) # Proportion Explained for PC1
 pc2_var     <- round(pca_summary[2, 2] * 100, 1) # Proportion Explained for PC2
 
+
 # Merge sample coords with metadata for plotting
 metadata_df          <- metadata_complete
 samp_coords$SampleID <- rownames(samp_coords)
@@ -183,8 +184,19 @@ p_beta_PCA <- ggplot(ordination_df, aes(x = Dim1, y = Dim2,
 # Grouping Ellipses
 if (show_ellipses) {
   p_beta_PCA <- p_beta_PCA + 
-    stat_ellipse(aes(group = .data[[group_clustering]], colour = .data[[group_clustering]], fill = .data[[group_clustering]]), 
-                 geom = "polygon", alpha = 0.1, type = "norm", level = 0.95, linewidth = 0.2)
+    stat_ellipse(
+      aes(
+        group    = .data[[group_clustering]], 
+        colour   = .data[[color_var]], 
+        fill     = .data[[color_var]],
+        linetype = .data[[shape_var]]   # <--- Maps linetype to depth, custom for this figure
+      ), 
+      geom      = "polygon", 
+      alpha     = 0.05, 
+      type      = "norm", 
+      level     = 0.95, 
+      linewidth = 0.5
+    )
 }
 
 # Environmental Arrows
@@ -233,6 +245,7 @@ if (show_labels) {
 p_beta_PCA <- p_beta_PCA + 
   theme_bw() +
   scale_shape_manual(values = c(16, 17, 15, 3, 7, 8, 4, 9, 10, 18, 19, 20)) +
+  scale_linetype_manual(values = c("solid", "dashed")) +
   labs(
     title    = paste(toupper(beta_metric), "Upgraded PCA (Aitchison)"),
     subtitle = paste("PERMANOVA p-value:", format.pval(beta_p_val, digits = 3)),
@@ -251,7 +264,10 @@ p_beta_PCA <- p_beta_PCA +
 # =====================================================================
 # 5. Save Output
 # =====================================================================
-ggsave(paste0("results/all_wetlands/PCA_Upgraded_", beta_metric, ".png"), 
-       p_beta_PCA, width = 12, height = 8, dpi = 300)
+#ggsave(paste0("results/all_wetlands/PCA_Upgraded_", beta_metric, ".png"), 
+#       p_beta_PCA, width = 12, height = 8, dpi = 300)
+#ggsave(paste0("results/all_wetlands/PCA_Upgraded_", beta_metric, ".svg"), 
+#       p_beta_PCA, width = 12, height = 8, dpi = 300)
+
 
 message("Upgraded PCA plot generated successfully.")
